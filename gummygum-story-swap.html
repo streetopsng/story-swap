@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Story Swap — GummyGum</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:        #EDEAE4;
+  --cream:     #FAF7F2;
+  --white:     #FFFFFF;
+  --orange:    #F5821F;
+  --orange2:   #E8710A;
+  --orange-lo: #FDE8D0;
+  --black:     #1A1A1A;
+  --mid:       #555555;
+  --muted:     #999999;
+  --border:    #E0DBD4;
+  --red:       #E8334A;
+  --green:     #22A855;
+  --r:         16px;
+  --rsm:       10px;
+}
+html, body { height: 100%; background: var(--bg); color: var(--black); font-family: 'Inter', -apple-system, sans-serif; overflow: hidden; }
+
+.screen { display: none; flex-direction: column; height: 100vh; max-width: 430px; margin: 0 auto; overflow: hidden; position: relative; z-index: 1; }
+.screen.active { display: flex; }
+.scroll { flex: 1; overflow-y: auto; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+/* shared buttons / inputs */
+.btn { width: 100%; padding: 16px; border-radius: 50px; font-size: 15px; font-weight: 800; border: none; cursor: pointer; font-family: inherit; transition: all .15s; }
+.btn-orange { background: var(--orange); color: var(--black); box-shadow: 0 4px 0 var(--orange2); }
+.btn-orange:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--orange2); }
+.btn-dark { background: var(--black); color: white; box-shadow: 0 4px 0 #000; }
+.btn-dark:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
+.btn-outline { background: white; color: var(--black); border: 2px solid var(--border); box-shadow: 0 3px 0 var(--border); }
+.btn-outline:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--border); }
+.btn.disabled { opacity: .45; pointer-events: none; }
+.fi { width: 100%; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--rsm); color: var(--black); font-size: 15px; padding: 13px 15px; outline: none; font-family: inherit; }
+.fi::placeholder { color: #bbb; }
+.section-label { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--mid); margin-bottom: 10px; }
+
+/* session header */
+.session-header { text-align: center; padding: 12px 16px 6px; flex-shrink: 0; }
+.session-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.session-name { font-size: 18px; font-weight: 900; color: var(--black); display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 2px; }
+.s-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--orange); flex-shrink: 0; }
+
+/* toast */
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--black); color: white; font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 30px; z-index: 700; opacity: 0; pointer-events: none; transition: all .3s; white-space: nowrap; box-shadow: 0 4px 0 #000; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes savePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+@keyframes rowIn { from{opacity:0;transform:translateX(8px)} to{opacity:1;transform:translateX(0)} }
+
+/* ── HOMEPAGE ── */
+.hp-top { background: var(--orange); padding: 44px 24px 64px; text-align: center; }
+.hp-brand { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; color: rgba(0,0,0,.55); text-transform: uppercase; }
+.hp-h1 { font-size: 30px; font-weight: 900; margin-top: 14px; line-height: 1.2; }
+.hp-sub { font-size: 13px; color: rgba(0,0,0,.6); margin: 10px auto 0; max-width: 280px; line-height: 1.55; }
+.hp-sheet { background: var(--white); border-radius: 24px 24px 0 0; padding: 28px 24px 40px; margin-top: -24px; min-height: 100%; }
+.hp-hint { margin-top: 14px; text-align: center; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ── HOST SETUP ── */
+.hs-nav { padding: 18px 16px 0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.hs-logo { font-size: 13px; font-weight: 900; color: var(--orange); letter-spacing: -.3px; }
+.hs-context { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-left: auto; }
+.config-card { margin: 12px 16px 0; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: 0 2px 0 var(--border); }
+.config-card-title { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--mid); margin-bottom: 12px; }
+.config-row-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.rounds-row { display: flex; gap: 8px; margin-top: 8px; }
+.rounds-pill { flex: 1; text-align: center; padding: 14px 4px; border-radius: 14px; border: 2px solid var(--border); background: white; font-weight: 800; font-size: 13px; cursor: pointer; transition: all .15s; }
+.rounds-pill.sel { border-color: var(--orange); background: var(--orange-lo); color: var(--orange2); }
+.add-q-link { text-align: center; font-size: 12px; font-weight: 700; color: var(--orange); text-decoration: underline; cursor: pointer; margin-top: 14px; }
+.picker-head-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.picker-quick { font-size: 11px; font-weight: 700; color: var(--orange); cursor: pointer; text-decoration: underline; }
+.picker-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.picker-row:last-child { border-bottom: none; }
+.picker-row.off { opacity: .4; }
+.picker-check { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 800; color: white; }
+.picker-row:not(.off) .picker-check { background: var(--orange); border-color: var(--orange); }
+.picker-row:not(.off) .picker-check::after { content: '✓'; }
+.part-av { width: 32px; height: 32px; border-radius: 50%; background: var(--orange-lo); border: 1.5px solid var(--orange); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.part-name { font-size: 13px; font-weight: 700; flex: 1; }
+.part-dept { font-size: 11px; color: var(--muted); }
+.hs-foot { padding: 14px 16px 150px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.launch-note { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.5; }
+
+/* ── custom question modal (shares .modal-overlay with avatar modal) ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 550; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.cq-modal, .av-modal { background: var(--cream); border-radius: 20px 20px 0 0; padding: 20px 16px 34px; width: 100%; max-width: 430px; max-height: 85vh; overflow-y: auto; animation: slideUp .3s ease; }
+.cq-title, .av-modal-title { font-size: 16px; font-weight: 800; text-align: center; margin-bottom: 14px; }
+.cat-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; justify-content: center; }
+.cat-chip { padding: 8px 14px; border-radius: 20px; border: 2px solid var(--border); background: white; font-size: 12px; font-weight: 700; cursor: pointer; text-align: center; }
+.cat-chip.on { border-color: var(--orange); background: var(--orange-lo); color: var(--orange2); }
+.cq-label { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--mid); margin: 12px 0 6px; }
+.av-modal-actions { display: flex; gap: 12px; align-items: center; }
+.modal-cancel { font-size: 13px; font-weight: 700; color: var(--mid); cursor: pointer; text-decoration: underline; }
+.av-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.av-option { width: 100%; aspect-ratio: 1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; border: 3px solid transparent; background: white; }
+.av-option.selected { border-color: var(--orange); transform: scale(1.08); }
+
+/* ── HOST LOBBY ── */
+#host-lobby { background: var(--bg); }
+.hl-progress { margin: 12px 16px 0; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px; box-shadow: 0 2px 0 var(--border); text-align: center; flex-shrink: 0; }
+.hl-progress-num { font-size: 30px; font-weight: 900; color: var(--orange); line-height: 1; }
+.hl-progress-lbl { font-size: 11px; color: var(--muted); font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 4px; }
+.hl-bar-wrap { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.hl-bar-fill { height: 100%; background: var(--orange); border-radius: 4px; transition: width .5s; }
+.hl-list-label { padding: 14px 16px 4px; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mid); flex-shrink: 0; }
+.hl-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); }
+.hl-av { width: 32px; height: 32px; border-radius: 50%; background: var(--orange-lo); border: 1.5px solid var(--orange); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; transition: opacity .2s; }
+.hl-row.waiting .hl-av { opacity: .35; }
+.hl-name { font-size: 13px; font-weight: 700; flex: 1; }
+.hl-status { font-size: 11px; font-weight: 700; }
+.hl-status.waiting { color: var(--muted); }
+.hl-status.joined { color: var(--green); }
+.hl-foot { padding: 12px 16px 150px; flex-shrink: 0; }
+.hl-hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.5; }
+
+/* ── HOST CONTROL (Story Swap) ── */
+.hc-foot { padding: 12px 16px 150px; flex-shrink: 0; }
+.ss-wrap { padding: 8px 16px 4px; }
+.ss-cat { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--orange); margin-bottom: 6px; }
+.ss-prompt { text-align: center; font-size: 19px; font-weight: 900; line-height: 1.35; margin-bottom: 10px; }
+.ss-elapsed { text-align: center; font-size: 12px; color: var(--muted); font-weight: 700; margin-bottom: 16px; }
+.ss-groups-label { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mid); margin-bottom: 8px; }
+.ss-group-card { background: white; border: 1.5px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; }
+.ss-group-title { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.ss-group-members { display: flex; gap: 8px; flex-wrap: wrap; }
+.ss-member-chip { display: flex; align-items: center; gap: 6px; background: var(--orange-lo); border: 1px solid var(--orange); border-radius: 20px; padding: 4px 12px 4px 4px; font-size: 12px; font-weight: 700; }
+.ss-member-av { width: 22px; height: 22px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+
+/* ── PLAYER HOME / EMAIL ── */
+#player-home { background: var(--bg); justify-content: center; align-items: center; }
+.ph-card { margin: 0 22px; background: var(--white); border: 1.5px solid var(--border); border-radius: 22px; padding: 30px 22px; text-align: center; box-shadow: 0 4px 0 var(--border); }
+.ph-icon { font-size: 44px; margin-bottom: 12px; }
+.ph-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); }
+.ph-title { font-size: 22px; font-weight: 900; margin-top: 8px; line-height: 1.3; }
+.ph-sub { font-size: 13px; color: var(--mid); margin-top: 10px; line-height: 1.65; }
+.ph-foot { padding: 22px 24px 150px; width: 100%; }
+#player-email { background: var(--bg); justify-content: center; }
+.pe-wrap { padding: 0 24px; }
+.pe-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); text-align: center; }
+.pe-title { font-size: 22px; font-weight: 900; text-align: center; margin-top: 6px; }
+.pe-sub { font-size: 13px; color: var(--mid); text-align: center; margin-top: 8px; line-height: 1.6; margin-bottom: 22px; }
+.pe-foot { padding: 22px 24px 150px; }
+
+/* ── PLAYER IDENTITY (name + avatar only) ── */
+.avatar-card { background: var(--white); border: 1.5px solid var(--border); border-radius: 20px; margin: 16px 16px 0; padding: 20px; box-shadow: 0 4px 0 var(--border); }
+.avatar-portrait-wrap { display: flex; flex-direction: column; align-items: center; }
+.avatar-circle { width: 96px; height: 96px; border-radius: 50%; background: #ccc; border: 3px solid var(--black); display: flex; align-items: center; justify-content: center; font-size: 48px; cursor: pointer; }
+.avatar-name-disp { font-size: 17px; font-weight: 800; margin-top: 8px; }
+.avatar-choose-btn { display: flex; align-items: center; gap: 8px; background: #EDEBE6; border: none; border-radius: 30px; padding: 8px 16px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--black); margin-top: 10px; font-family: inherit; }
+.emp-foot { padding: 14px 16px 150px; flex-shrink: 0; }
+.saving-av { width: 96px; height: 96px; border-radius: 50%; background: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 48px; animation: savePulse 1.5s ease-in-out infinite; }
+.saving-title { font-size: 18px; font-weight: 800; }
+.saving-spin { font-size: 28px; animation: spin 2s linear infinite; }
+
+/* ── PLAYER LOBBY ── */
+.emp-you-card { display: flex; align-items: center; gap: 12px; margin: 10px 16px 0; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r); padding: 14px; box-shadow: 0 2px 0 var(--border); flex-shrink: 0; }
+.eyc-av { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; background: var(--orange-lo); border: 2px solid var(--orange); flex-shrink: 0; }
+.eyc-name { font-size: 15px; font-weight: 800; }
+.eyc-cp { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.others-label { padding: 10px 16px 6px; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--mid); flex-shrink: 0; }
+.emp-player-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid var(--border); animation: rowIn .3s ease; }
+.epr-av { width: 32px; height: 32px; border-radius: 50%; background: var(--orange-lo); border: 1.5px solid var(--orange); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.epr-name { font-size: 13px; font-weight: 700; flex: 1; }
+.epr-cp { font-size: 11px; color: var(--muted); }
+.epr-status { font-size: 16px; }
+.emp-lobby-wait { padding: 14px 16px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.wait-pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); animation: blink 1.2s ease-in-out infinite; }
+.wait-text { font-size: 13px; color: var(--mid); }
+.emp-lobby-foot { padding: 0 16px 150px; flex-shrink: 0; }
+
+/* ── PLAYER ROUND ── */
+.pr-demo-note { text-align: center; font-size: 11px; color: var(--muted); margin-top: -4px; margin-bottom: 14px; }
+.turn-card { background: white; border: 1.5px solid var(--border); border-radius: 18px; padding: 24px 18px; margin: 6px 16px 16px; text-align: center; box-shadow: 0 3px 0 var(--border); }
+.turn-card.mine { border-color: var(--orange); background: var(--orange-lo); box-shadow: 0 3px 0 var(--orange); }
+.turn-emoji { font-size: 34px; margin-bottom: 8px; }
+.turn-title { font-size: 17px; font-weight: 900; }
+.turn-sub { font-size: 13px; color: var(--mid); margin-top: 4px; }
+.turn-timer { font-size: 26px; font-weight: 900; color: var(--orange2); margin-top: 12px; }
+
+.proto-fab { position: fixed; top: 14px; right: 14px; z-index: 600; width: 44px; height: 44px; border-radius: 50%; background: #F8F6F0; border: 2px dashed #C9C2B8; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; }
+.proto-fab:hover { border-color: var(--orange); }
+.proto-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 601; align-items: flex-end; justify-content: center; }
+.proto-overlay.show { display: flex; }
+.proto-sheet { background: #F8F6F0; border-top: 2px dashed #C9C2B8; border-radius: 20px 20px 0 0; padding: 16px 16px 24px; width: 100%; max-width: 430px; animation: slideUp .25s ease; }
+.proto-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #999; text-align: center; margin-bottom: 12px; }
+.proto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.proto-btn { padding: 12px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1.5px dashed #C9C2B8; background: white; cursor: pointer; font-family: inherit; color: #666; text-align: center; }
+.proto-btn:hover { border-color: var(--orange); color: var(--orange); }
+.proto-note { font-size: 11px; color: #999; text-align: center; line-height: 1.4; margin-top: 14px; }
+.proto-close { display: block; margin: 14px auto 0; font-size: 12px; font-weight: 700; color: var(--mid); text-decoration: underline; cursor: pointer; background: none; border: none; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- AVATAR PICKER MODAL -->
+<div class="modal-overlay" id="avatarModal">
+  <div class="av-modal">
+    <div class="av-modal-title">Choose your avatar</div>
+    <div class="av-grid" id="avatarGrid"></div>
+    <div class="av-modal-actions">
+      <button class="btn btn-orange" style="flex:1" onclick="confirmAvatar()">Confirm selection</button>
+      <span class="modal-cancel" onclick="closeAvatarModal()">Cancel</span>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM QUESTION MODAL (host setup — Section 7 of the brief) -->
+<div class="modal-overlay" id="cqModal">
+  <div class="cq-modal">
+    <div class="cq-title">Add your own prompt</div>
+    <div class="cq-label">Category</div>
+    <div class="cat-row" id="cqCatRow"></div>
+    <div class="cq-label">Prompt</div>
+    <input class="fi" id="cqPrompt" placeholder="e.g. What's a small thing that makes your day better?" maxlength="140" />
+    <div class="av-modal-actions" style="margin-top:18px">
+      <button class="btn btn-orange" style="flex:1" onclick="saveCustomQuestion()">Save prompt</button>
+      <span class="modal-cancel" onclick="closeCustomQModal()">Cancel</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  HOMEPAGE — host only. Employees never see this; they arrive
+  via their own email-invite flow (see PLAYER HOME below).
+══════════════════════════════════ -->
+<div class="screen active" id="homepage">
+  <div class="hp-top">
+    <div class="hp-brand">GummyGum</div>
+    <div class="hp-h1">Story Swap</div>
+    <div class="hp-sub">Guided small-group conversations that help your team understand how each other works.</div>
+  </div>
+  <div class="scroll">
+    <div class="hp-sheet">
+      <button class="btn btn-orange" onclick="show('host-setup')">Create a game ›</button>
+      <div class="hp-hint">Employees join via an email invite sent by GummyGum — no code needed on their end.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  HOST SETUP
+  Per the brief: the host should have "almost nothing to
+  manage" — just how many rounds. GummyGum picks prompts
+  and forms the groups automatically.
+══════════════════════════════════ -->
+<div class="screen" id="host-setup">
+  <div class="hs-nav">
+    <span class="hs-logo">GummyGum</span>
+    <span class="hs-context">Story Swap</span>
+  </div>
+  <div class="scroll">
+    <div class="config-card">
+      <div class="config-card-title">Session name</div>
+      <input class="fi" id="sessionNameInput" value="Team Bonding — June" style="font-size:14px" />
+    </div>
+
+    <div class="config-card">
+      <div class="config-card-title">Rounds</div>
+      <div class="config-row-sub" style="margin-bottom:2px">Each round, GummyGum gives everyone a prompt and forms new small groups of 2–3.</div>
+      <div class="rounds-row">
+        <div class="rounds-pill" onclick="selectRounds(2,this)">2 rounds</div>
+        <div class="rounds-pill sel" onclick="selectRounds(3,this)">3 rounds</div>
+        <div class="rounds-pill" onclick="selectRounds(4,this)">4 rounds</div>
+        <div class="rounds-pill" onclick="selectRounds(5,this)">5 rounds</div>
+      </div>
+      <div class="add-q-link" onclick="openCustomQModal()">+ Add your own prompt</div>
+    </div>
+
+    <div class="config-card">
+      <div class="picker-head-row">
+        <div class="config-card-title" style="margin-bottom:0">Team picker · <span id="pickerCount" style="color:var(--orange)">5 selected</span></div>
+        <span class="picker-quick" onclick="pickerSelectAll()">Select all</span>
+      </div>
+      <div class="config-row-sub" style="margin-bottom:4px">Choose who gets invited to this session</div>
+      <div id="participantList"></div>
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="hs-foot">
+    <button class="btn btn-orange" onclick="launchSession()">Launch session — notify team ›</button>
+    <div class="launch-note">GummyGum will email each selected teammate a direct link.<br>You'll land in the lobby to watch them join.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  HOST LOBBY — same waiting-room pattern as every GummyGum
+  experience. Host can't start until people have joined.
+══════════════════════════════════ -->
+<div class="screen" id="host-lobby">
+  <div class="hs-nav">
+    <span class="hs-logo">GummyGum</span>
+    <span class="hs-context" id="hlSessionName">Team Bonding — June</span>
+  </div>
+  <div class="hl-progress">
+    <div class="hl-progress-num"><span id="hlJoinedCount">0</span>/<span id="hlTotalCount">5</span></div>
+    <div class="hl-progress-lbl">Players joined</div>
+    <div class="hl-bar-wrap"><div class="hl-bar-fill" id="hlBarFill" style="width:0%"></div></div>
+  </div>
+  <div class="hl-list-label">Invited</div>
+  <div class="scroll">
+    <div id="hlList"></div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="hl-foot">
+    <button class="btn btn-orange disabled" id="hlStartBtn" onclick="hostStartGame()">Start game ›</button>
+    <div class="hl-hint" id="hlHint">Waiting for everyone to join — invites were just sent.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  HOST CONTROL ROOM
+  Host reviews the prompt and groups, then advances the round
+  once conversations have run their course. Host never joins
+  a group or answers a prompt themselves.
+══════════════════════════════════ -->
+<div class="screen" id="host-control">
+  <div class="hs-nav">
+    <span class="hs-logo">GummyGum</span>
+    <span class="hs-context" id="hcSessionName">Team Bonding — June</span>
+  </div>
+  <div style="padding:6px 16px 0;text-align:center;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)" id="hcRoundLabel">Round 1 of 3</div>
+  <div class="scroll">
+    <div class="ss-wrap">
+      <div class="ss-cat" id="hcCat">How You Work</div>
+      <div class="ss-prompt" id="hcPrompt">What helps you do your best work?</div>
+      <div class="ss-elapsed" id="hcElapsed">⏱ 0:00 elapsed</div>
+      <div class="ss-groups-label">Groups this round</div>
+      <div id="hcGroups"></div>
+    </div>
+  </div>
+  <div class="hc-foot">
+    <button class="btn btn-orange" id="hcNextBtn" onclick="nextHostRound()">Next round ›</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  PLAYER HOME — first screen after clicking the email invite
+  link. Distinct from the host homepage; no "create a game" path.
+══════════════════════════════════ -->
+<div class="screen" id="player-home">
+  <div class="ph-card">
+    <div class="ph-icon">🗣️</div>
+    <div class="ph-eyebrow">You're invited</div>
+    <div class="ph-title">You've been invited to play<br><span style="color:var(--orange)">Story Swap</span></div>
+    <div class="ph-sub">Session: <strong id="phSession" style="color:var(--black)">Team Bonding — June</strong><br>Small-group conversations, guided by a prompt each round. Just share and listen.</div>
+  </div>
+  <div class="ph-foot">
+    <button class="btn btn-orange" onclick="show('player-email')">Join the game ›</button>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:10px">Takes about 20 seconds to set up</div>
+  </div>
+</div>
+
+<!-- ══ PLAYER EMAIL ══ -->
+<div class="screen" id="player-email">
+  <div class="pe-wrap">
+    <div class="pe-eyebrow">Confirm it's you</div>
+    <div class="pe-title">What's your work email?</div>
+    <div class="pe-sub">We'll match you to the invite for <strong id="peSession" style="color:var(--black)">Team Bonding — June</strong>.</div>
+    <input class="fi" id="playerEmailInput" type="email" placeholder="you@company.com" style="text-align:center;font-size:15px" oninput="onPlayerEmailInput(this)" />
+  </div>
+  <div class="pe-foot">
+    <button class="btn btn-orange disabled" id="peContinueBtn" onclick="submitPlayerEmail()">Continue ›</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  PLAYER IDENTITY — name + avatar only. No statements needed
+  for this experience.
+══════════════════════════════════ -->
+<div class="screen" id="player-identity">
+  <div class="hs-nav">
+    <span class="hs-logo">GummyGum</span>
+    <span class="hs-context" id="piSessionName">Team Bonding — June</span>
+  </div>
+  <div class="scroll">
+    <div class="avatar-card">
+      <div class="avatar-portrait-wrap">
+        <div class="avatar-circle" onclick="openAvatarModal()"><span id="avatarDisplay">🙂</span></div>
+        <div class="avatar-name-disp" id="avatarNameDisp">—</div>
+        <button class="avatar-choose-btn" onclick="openAvatarModal()">🎨 Choose avatar</button>
+      </div>
+    </div>
+    <div style="padding:16px 16px 0">
+      <div class="section-label">Your name</div>
+      <input class="fi" id="empNameInput" placeholder="e.g. Ayoola" maxlength="20" oninput="onNameInput(this)" />
+    </div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="emp-foot">
+    <button class="btn btn-orange" id="joinLobbyBtn" onclick="goToSaving()" style="opacity:.5;pointer-events:none">Enter the lobby →</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">Enter your name to continue</div>
+  </div>
+</div>
+
+<!-- SAVING -->
+<div class="screen" id="player-saving">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:32px">
+    <div class="saving-av" id="savingAv">🙂</div>
+    <div class="saving-title">Saving your identity...</div>
+    <div class="saving-spin">🪐</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  PLAYER LOBBY
+══════════════════════════════════ -->
+<div class="screen" id="player-lobby">
+  <div class="session-header">
+    <div class="session-label">Session</div>
+    <div class="session-name"><div class="s-dot"></div><span id="plSessionName">Team Bonding — June</span><div class="s-dot"></div></div>
+  </div>
+  <div class="emp-you-card">
+    <div class="eyc-av" id="eycAv">🙂</div>
+    <div><div class="eyc-name" id="eycName">You</div><div class="eyc-cp">Ready to play</div></div>
+    <div style="background:var(--orange-lo);border:1.5px solid var(--orange);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:800;color:var(--orange2)">✓ Ready</div>
+  </div>
+  <div class="others-label">Also ready</div>
+  <div class="scroll">
+    <div id="empLobbyPlayers"></div>
+    <div style="height:8px"></div>
+  </div>
+  <div class="emp-lobby-wait"><div class="wait-pulse"></div><div class="wait-text" id="lobbyWaitText">Waiting for the host to start...</div></div>
+  <div class="emp-lobby-foot">
+    <button class="btn btn-orange" onclick="startPlayerGame()">Demo: Start game now ›</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  PLAYER ROUND — prompt + this round's small group + turn flow.
+══════════════════════════════════ -->
+<div class="screen" id="player-round">
+  <div class="session-header">
+    <div class="session-label" id="prRoundLabel">Round 1 of 3</div>
+    <div class="session-name"><div class="s-dot"></div><span id="prSessionName">Team Bonding — June</span><div class="s-dot"></div></div>
+  </div>
+  <div class="scroll">
+    <div class="ss-wrap">
+      <div class="ss-cat" id="prCat">How You Work</div>
+      <div class="ss-prompt" id="prPrompt">What helps you do your best work?</div>
+      <div class="ss-groups-label">Your group</div>
+      <div class="ss-group-members" id="prGroupMembers"></div>
+    </div>
+    <div class="pr-demo-note">⏱ Turns are sped up for this demo — real sessions give each person 2 minutes</div>
+    <div id="turnArea"></div>
+  </div>
+</div>
+
+<!-- ══ FINISH SCREENS ══ -->
+<div class="screen" id="player-finish">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+    <div class="ph-card">
+      <div class="ph-icon">🎉</div>
+      <div class="ph-eyebrow">Session complete</div>
+      <div class="ph-title">That's a wrap!</div>
+      <div class="ph-sub">Thanks for sharing with your team — hope you learned something new about each other.</div>
+    </div>
+  </div>
+</div>
+
+<div class="screen" id="host-finish">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+    <div class="ph-card">
+      <div class="ph-icon">🏁</div>
+      <div class="ph-eyebrow">Session complete</div>
+      <div class="ph-title">Nice conversations, team!</div>
+      <div class="ph-sub" id="hfSub">You ran 3 rounds of Story Swap.</div>
+    </div>
+  </div>
+  <div class="ph-foot">
+    <button class="btn btn-orange" onclick="show('homepage')">Back to home</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+  PROTOTYPE PREVIEW SWITCHER — demo-only, not real product chrome.
+══════════════════════════════════ -->
+<div class="proto-fab" onclick="toggleProtoPanel(true)">🧪</div>
+<div class="proto-overlay" id="protoOverlay" onclick="if(event.target===this)toggleProtoPanel(false)">
+  <div class="proto-sheet">
+    <div class="proto-label">⚠ Demo preview — not real product chrome</div>
+    <div class="proto-grid">
+      <button class="proto-btn" onclick="show('homepage');toggleProtoPanel(false)">🏠 Host home</button>
+      <button class="proto-btn" onclick="show('host-setup');toggleProtoPanel(false)">🎛 Host setup</button>
+      <button class="proto-btn" onclick="show('host-lobby');buildHostLobby(PARTICIPANTS.filter(p=>p.selected));toggleProtoPanel(false)">🕓 Host lobby</button>
+      <button class="proto-btn" onclick="if(!sessionPrompts.length)sessionPrompts=buildSessionPrompts(roundCount);show('host-control');startHostControl();toggleProtoPanel(false)">📺 Control room</button>
+      <button class="proto-btn" onclick="initPlayerHome();toggleProtoPanel(false)">📧 Player: email link</button>
+      <button class="proto-btn" onclick="show('player-identity');initPlayerIdentity();toggleProtoPanel(false)">🎭 Player identity</button>
+    </div>
+    <div class="proto-note">Host never plays and has its own homepage. Players get a separate homepage from the email link, then confirm email → avatar/name → lobby → rounds.</div>
+    <button class="proto-close" onclick="toggleProtoPanel(false)">Close</button>
+  </div>
+</div>
+
+<script>
+/* ═══ PROMPT BANK (from the brief — 5 categories × 10 prompts) ═══ */
+const QUESTION_BANK = {
+  'How You Work': [
+    "What helps you do your best work?",
+    "Do you prefer figuring something out on your own or talking it through with someone? Tell us why.",
+    "Tell us about a time when you felt completely in your element at work.",
+    "What's something about the way you work that you'd like your teammates to understand?",
+    "When you have a difficult task ahead of you, how do you usually approach it?",
+    "What's one thing that can make a workday much better for you?",
+    "Do you prefer having a clear plan or having room to figure things out as you go?",
+    "Tell us about a work habit that helps you stay productive.",
+    "What's something you need from your environment to do your best work?",
+    "When you're working on something important, what helps you stay focused?",
+  ],
+  'What Motivates You': [
+    "What makes you feel like you've had a really good day at work?",
+    "What kind of work makes you lose track of time?",
+    "What makes you want to do your best work?",
+    "Tell us about something you've worked on that you were really proud of.",
+    "What kind of recognition means the most to you?",
+    "What makes you feel like your work matters?",
+    "Tell us about a time someone made you feel really appreciated for your work.",
+    "What's something you've always wanted to get better at?",
+    "What kind of challenge gets you excited?",
+    "When you're having a difficult day at work, what usually helps you keep going?",
+  ],
+  'Communication': [
+    "When you're stuck on something, what's more helpful: someone giving you advice or helping you think it through?",
+    "How do you prefer people to give you feedback?",
+    "What's something teammates sometimes misunderstand about how you communicate?",
+    "When you have an idea, do you prefer to think it through first or talk about it immediately?",
+    "Tell us about a time when good communication helped solve a problem.",
+    "What's one thing that makes it easier for you to speak up in a team?",
+    "When you disagree with someone, how do you usually approach the conversation?",
+    "Do you prefer quick messages or detailed explanations when someone is asking you to do something?",
+    "What's something you appreciate when someone is communicating with you?",
+    "Tell us about a time someone communicated something to you in a way that really helped.",
+  ],
+  'What You Value': [
+    "What do you really value in the people you work with?",
+    "What makes you feel comfortable around a new team?",
+    "What's something you wish more people knew about you?",
+    "What quality do you appreciate most in a teammate?",
+    "What does being a good teammate mean to you?",
+    "What's something you think every good team should have?",
+    "What is one thing you will always make time for, even when you're busy?",
+    "What's something you've learned about yourself through working with other people?",
+    "What kind of environment brings out the best in you?",
+    "What's one thing you think makes people feel like they belong on a team?",
+  ],
+  'Team Experiences': [
+    "Tell us about a team you've really enjoyed being part of. What made it work?",
+    "Tell us about a time a teammate really helped you.",
+    "Tell us about a team experience you remember fondly.",
+    "What's the best piece of advice you've received from a teammate?",
+    "Tell us about a time you learned something important from someone you worked with.",
+    "Tell us about a time your team overcame something difficult together.",
+    "What's the funniest or most memorable thing that has happened on a team you've been part of?",
+    "Tell us about someone you've worked with who taught you something valuable.",
+    "What's one thing a previous team did that you'd love to bring to your current team?",
+    "What's one thing you hope your teammates will remember about working with you?",
+  ],
+};
+const CATEGORIES = Object.keys(QUESTION_BANK);
+const CUSTOM_QUESTIONS = {}; CATEGORIES.forEach(c => CUSTOM_QUESTIONS[c] = []);
+
+const AVATAR_OPTIONS = ['🦊','🐻','🐯','🦁','🐺','🦅','🐬','🦋','🐸','🦄','🐙','🦜','🐧','🦔','🐵','🦩'];
+const PARTICIPANTS = [
+  {name:'Chidinma', dept:'Product', av:'🦊', selected:true},
+  {name:'Emeka',    dept:'Engineering', av:'🐻', selected:true},
+  {name:'Zara',     dept:'Design', av:'🐯', selected:true},
+  {name:'Kelvin',   dept:'Sales', av:'🦁', selected:true},
+  {name:'Ayoola',   dept:'People Ops', av:'🐺', selected:true},
+];
+
+let roundCount = 3;
+let sessionPrompts = [];
+let sessionName = 'Team Bonding — June';
+let selectedAv = '🙂';
+let tempAv = '🙂';
+let ME = { name: '', av: '🙂' };
+const DEMO_TURN_SECONDS = 10;
+
+/* ═══ UTILS ═══ */
+function toggleProtoPanel(open) { document.getElementById('protoOverlay').classList.toggle('show', open); }
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ═══ PROMPT SELECTION (brief section 8) ═══ */
+function buildSessionPrompts(n) {
+  let pool = [];
+  CATEGORIES.forEach(cat => {
+    const catPool = shuffle([...QUESTION_BANK[cat], ...CUSTOM_QUESTIONS[cat]]);
+    catPool.forEach(text => pool.push({ text, cat }));
+  });
+  pool = shuffle(pool);
+  const selected = [];
+  const remaining = [...pool];
+  while (selected.length < n && remaining.length) {
+    const lastCat = selected.length ? selected[selected.length - 1].cat : null;
+    let idx = remaining.findIndex(p => p.cat !== lastCat);
+    if (idx === -1) idx = 0;
+    selected.push(remaining[idx]);
+    remaining.splice(idx, 1);
+  }
+  return selected;
+}
+
+/* ═══ GROUPING (brief section 4 & 9) ═══ */
+function computeGroupSizes(n) {
+  if (n <= 3) return n > 0 ? [n] : [];
+  const numGroups = Math.floor(n / 2);
+  const sizes = new Array(numGroups).fill(2);
+  if (n - numGroups * 2 === 1) sizes[sizes.length - 1] = 3;
+  return sizes;
+}
+function groupSetKey(group) { return group.map(p => p.name).sort().join(','); }
+function groupsRepeatPrevious(groups, prevGroups) {
+  if (!prevGroups) return false;
+  const prevKeys = prevGroups.map(groupSetKey);
+  return groups.some(g => prevKeys.includes(groupSetKey(g)));
+}
+function buildGroups(people, prevGroups) {
+  let groups, attempts = 0;
+  do {
+    const shuffled = shuffle(people);
+    const sizes = computeGroupSizes(shuffled.length);
+    groups = [];
+    let idx = 0;
+    sizes.forEach(sz => { groups.push(shuffled.slice(idx, idx + sz)); idx += sz; });
+    attempts++;
+  } while (attempts < 8 && groupsRepeatPrevious(groups, prevGroups));
+  return groups;
+}
+
+/* ═══ HOST SETUP ═══ */
+function selectRounds(n, el) {
+  roundCount = n;
+  document.querySelectorAll('.rounds-pill').forEach(p => p.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+let cqSelectedCat = 'How You Work';
+function openCustomQModal() {
+  const row = document.getElementById('cqCatRow');
+  row.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'cat-chip' + (cat === cqSelectedCat ? ' on' : '');
+    chip.textContent = cat;
+    chip.onclick = () => { cqSelectedCat = cat; document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('on')); chip.classList.add('on'); };
+    row.appendChild(chip);
+  });
+  document.getElementById('cqPrompt').value = '';
+  document.getElementById('cqModal').classList.add('show');
+}
+function closeCustomQModal() { document.getElementById('cqModal').classList.remove('show'); }
+function saveCustomQuestion() {
+  const text = document.getElementById('cqPrompt').value.trim();
+  if (!text) { showToast('Write a prompt first'); return; }
+  CUSTOM_QUESTIONS[cqSelectedCat].push(text);
+  showToast('Added to ' + cqSelectedCat + ' — it can appear in this and future sessions');
+  closeCustomQModal();
+}
+
+function buildParticipantPicker() {
+  const list = document.getElementById('participantList');
+  list.innerHTML = '';
+  PARTICIPANTS.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'picker-row' + (p.selected ? '' : ' off');
+    row.onclick = () => pickerToggle(i);
+    row.innerHTML = `<div class="picker-check"></div>
+      <div class="part-av">${p.av}</div>
+      <div style="flex:1"><div class="part-name">${p.name}</div><div class="part-dept">${p.dept}</div></div>`;
+    list.appendChild(row);
+  });
+  updatePickerCount();
+}
+function pickerToggle(i) { PARTICIPANTS[i].selected = !PARTICIPANTS[i].selected; buildParticipantPicker(); }
+function pickerSelectAll() {
+  const allOn = PARTICIPANTS.every(p => p.selected);
+  PARTICIPANTS.forEach(p => p.selected = !allOn);
+  buildParticipantPicker();
+}
+function updatePickerCount() {
+  const n = PARTICIPANTS.filter(p => p.selected).length;
+  document.getElementById('pickerCount').textContent = n + ' selected';
+  document.querySelector('.picker-quick').textContent = PARTICIPANTS.every(p => p.selected) ? 'Deselect all' : 'Select all';
+}
+buildParticipantPicker();
+
+function launchSession() {
+  sessionName = document.getElementById('sessionNameInput').value.trim() || 'Team Bonding — June';
+  ['hlSessionName','hcSessionName','phSession','peSession','piSessionName','plSessionName','prSessionName'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = sessionName;
+  });
+  const invited = PARTICIPANTS.filter(p => p.selected);
+  if (!invited.length) { showToast('Select at least one teammate first'); return; }
+  sessionPrompts = buildSessionPrompts(roundCount);
+  showToast('Invites sent to ' + invited.length + ' teammate' + (invited.length === 1 ? '' : 's'));
+  show('host-lobby');
+  buildHostLobby(invited);
+}
+
+/* ═══ HOST LOBBY ═══ */
+let hlTimer = null;
+function buildHostLobby(invited) {
+  clearInterval(hlTimer);
+  const list = document.getElementById('hlList');
+  list.innerHTML = '';
+  invited.forEach(p => {
+    p._hlJoined = false;
+    const row = document.createElement('div');
+    row.className = 'hl-row waiting';
+    row.id = 'hl-row-' + p.name;
+    row.innerHTML = `<div class="hl-av">${p.av}</div><div class="hl-name">${p.name}</div><div class="hl-status waiting">Invited...</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('hlTotalCount').textContent = invited.length;
+  document.getElementById('hlJoinedCount').textContent = '0';
+  document.getElementById('hlBarFill').style.width = '0%';
+  const startBtn = document.getElementById('hlStartBtn');
+  startBtn.classList.add('disabled');
+  document.getElementById('hlHint').textContent = 'Waiting for everyone to join — invites were just sent.';
+  let joined = 0;
+  hlTimer = setInterval(() => {
+    const next = invited.find(p => !p._hlJoined);
+    if (!next) { clearInterval(hlTimer); return; }
+    next._hlJoined = true; joined++;
+    const row = document.getElementById('hl-row-' + next.name);
+    row.classList.remove('waiting');
+    row.querySelector('.hl-status').textContent = 'Joined ✓';
+    row.querySelector('.hl-status').className = 'hl-status joined';
+    document.getElementById('hlJoinedCount').textContent = joined;
+    document.getElementById('hlBarFill').style.width = Math.round(joined / invited.length * 100) + '%';
+    if (joined >= 1) startBtn.classList.remove('disabled');
+    document.getElementById('hlHint').textContent = joined >= invited.length ? 'Everyone is in — ready when you are.' : (invited.length - joined) + ' still joining...';
+  }, 1400);
+}
+function hostStartGame() {
+  if (document.getElementById('hlStartBtn').classList.contains('disabled')) { showToast('Wait for at least one player to join'); return; }
+  clearInterval(hlTimer);
+  show('host-control');
+  startHostControl();
+}
+
+/* ═══ HOST CONTROL ═══ */
+let hostRoundIdx = 0;
+let prevHostGroups = null;
+let hcElapsedInterval = null;
+let hcElapsedSec = 0;
+
+function startHostControl() { hostRoundIdx = 0; prevHostGroups = null; loadHostRound(); }
+function loadHostRound() {
+  const p = sessionPrompts[hostRoundIdx];
+  document.getElementById('hcRoundLabel').textContent = 'Round ' + (hostRoundIdx + 1) + ' of ' + sessionPrompts.length;
+  document.getElementById('hcCat').textContent = p.cat;
+  document.getElementById('hcPrompt').textContent = p.text;
+
+  const invited = PARTICIPANTS.filter(x => x.selected);
+  const groups = buildGroups(invited, prevHostGroups);
+  prevHostGroups = groups;
+  const wrap = document.getElementById('hcGroups');
+  wrap.innerHTML = '';
+  groups.forEach((g, i) => {
+    const card = document.createElement('div');
+    card.className = 'ss-group-card';
+    card.innerHTML = `<div class="ss-group-title">Group ${i + 1}</div>
+      <div class="ss-group-members">${g.map(m => `<div class="ss-member-chip"><div class="ss-member-av">${m.av}</div>${m.name}</div>`).join('')}</div>`;
+    wrap.appendChild(card);
+  });
+
+  const btn = document.getElementById('hcNextBtn');
+  btn.textContent = hostRoundIdx < sessionPrompts.length - 1 ? 'Next round ›' : 'Finish session ›';
+
+  clearInterval(hcElapsedInterval);
+  hcElapsedSec = 0;
+  updateElapsedDisplay();
+  hcElapsedInterval = setInterval(() => { hcElapsedSec++; updateElapsedDisplay(); }, 1000);
+}
+function updateElapsedDisplay() {
+  const m = Math.floor(hcElapsedSec / 60), s = hcElapsedSec % 60;
+  document.getElementById('hcElapsed').textContent = '⏱ ' + m + ':' + String(s).padStart(2, '0') + ' elapsed';
+}
+function nextHostRound() {
+  hostRoundIdx++;
+  if (hostRoundIdx >= sessionPrompts.length) { finishHostSession(); return; }
+  loadHostRound();
+}
+function finishHostSession() {
+  clearInterval(hcElapsedInterval);
+  document.getElementById('hfSub').textContent = 'You ran ' + sessionPrompts.length + ' rounds of Story Swap.';
+  show('host-finish');
+}
+
+/* ═══ PLAYER: EMAIL LINK ENTRY ═══ */
+function initPlayerHome() {
+  if (!sessionPrompts.length) sessionPrompts = buildSessionPrompts(roundCount);
+  document.getElementById('phSession').textContent = sessionName;
+  document.getElementById('peSession').textContent = sessionName;
+  document.getElementById('playerEmailInput').value = '';
+  document.getElementById('peContinueBtn').classList.add('disabled');
+  show('player-home');
+}
+function onPlayerEmailInput(el) {
+  const val = el.value.trim();
+  document.getElementById('peContinueBtn').classList.toggle('disabled', !/^\S+@\S+\.\S+$/.test(val));
+}
+function submitPlayerEmail() {
+  const val = document.getElementById('playerEmailInput').value.trim();
+  if (!/^\S+@\S+\.\S+$/.test(val)) { showToast('Enter a valid work email'); return; }
+  show('player-identity');
+  initPlayerIdentity();
+}
+
+/* ═══ PLAYER IDENTITY ═══ */
+function initPlayerIdentity() {
+  document.getElementById('piSessionName').textContent = sessionName;
+  document.getElementById('empNameInput').value = '';
+  document.getElementById('avatarNameDisp').textContent = '—';
+  const btn = document.getElementById('joinLobbyBtn');
+  btn.style.opacity = '.5'; btn.style.pointerEvents = 'none';
+  selectedAv = '🙂'; document.getElementById('avatarDisplay').textContent = selectedAv;
+}
+function onNameInput(el) {
+  const val = el.value.trim();
+  document.getElementById('avatarNameDisp').textContent = val || '—';
+  const btn = document.getElementById('joinLobbyBtn');
+  if (val.length >= 2) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+  else { btn.style.opacity = '.5'; btn.style.pointerEvents = 'none'; }
+}
+function openAvatarModal() {
+  tempAv = selectedAv;
+  const grid = document.getElementById('avatarGrid');
+  grid.innerHTML = '';
+  AVATAR_OPTIONS.forEach(em => {
+    const el = document.createElement('div');
+    el.className = 'av-option' + (em === tempAv ? ' selected' : '');
+    el.textContent = em;
+    el.onclick = () => { document.querySelectorAll('.av-option').forEach(a => a.classList.remove('selected')); el.classList.add('selected'); tempAv = em; };
+    grid.appendChild(el);
+  });
+  document.getElementById('avatarModal').classList.add('show');
+}
+function closeAvatarModal() { document.getElementById('avatarModal').classList.remove('show'); }
+function confirmAvatar() {
+  selectedAv = tempAv;
+  document.getElementById('avatarDisplay').textContent = selectedAv;
+  closeAvatarModal();
+}
+
+function goToSaving() {
+  const nameVal = document.getElementById('empNameInput').value.trim();
+  if (!nameVal) { showToast('Enter your name first'); return; }
+  ME.name = nameVal; ME.av = selectedAv;
+  document.getElementById('savingAv').textContent = selectedAv;
+  document.getElementById('eycAv').textContent = selectedAv;
+  document.getElementById('eycName').textContent = nameVal;
+  document.getElementById('plSessionName').textContent = sessionName;
+  show('player-saving');
+  setTimeout(() => { buildEmpLobby(); show('player-lobby'); startEmpLobbyFill(); }, 1500);
+}
+
+/* ═══ PLAYER LOBBY ═══ */
+function buildEmpLobby() {
+  const wrap = document.getElementById('empLobbyPlayers');
+  wrap.innerHTML = '';
+  PARTICIPANTS.filter(p => p.selected && p._in).forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'emp-player-row';
+    row.innerHTML = `<div class="epr-av">${p.av}</div><div style="flex:1"><div class="epr-name">${p.name}</div><div class="epr-cp">${p.dept}</div></div><div class="epr-status">🟢</div>`;
+    wrap.appendChild(row);
+  });
+}
+let empLobbyTimer = null;
+function startEmpLobbyFill() {
+  clearInterval(empLobbyTimer);
+  PARTICIPANTS.forEach(p => p._in = false);
+  document.getElementById('lobbyWaitText').textContent = 'Waiting for the host to start...';
+  empLobbyTimer = setInterval(() => {
+    const next = PARTICIPANTS.find(p => p.selected && !p._in);
+    if (!next) { clearInterval(empLobbyTimer); document.getElementById('lobbyWaitText').textContent = 'All participants are in. Waiting for host to start...'; return; }
+    next._in = true; buildEmpLobby();
+  }, 1400);
+}
+
+/* ═══ PLAYER: ROUNDS ═══ */
+let playerRoundIdx = 0;
+let myGroup = [];
+let turnOrder = [];
+let turnIdx = 0;
+let turnTimerInterval = null;
+let prevMyGroupKey = null;
+
+function startPlayerGame() {
+  clearInterval(empLobbyTimer);
+  if (!sessionPrompts.length) sessionPrompts = buildSessionPrompts(roundCount);
+  playerRoundIdx = 0;
+  prevMyGroupKey = null;
+  loadPlayerRound();
+  show('player-round');
+}
+function loadPlayerRound() {
+  const p = sessionPrompts[playerRoundIdx];
+  document.getElementById('prRoundLabel').textContent = 'Round ' + (playerRoundIdx + 1) + ' of ' + sessionPrompts.length;
+  document.getElementById('prSessionName').textContent = sessionName;
+  document.getElementById('prCat').textContent = p.cat;
+  document.getElementById('prPrompt').textContent = p.text;
+
+  // Build "my" group for this round using the invited roster + ME, avoiding my last group where possible.
+  const invited = PARTICIPANTS.filter(x => x.selected);
+  const totalWithMe = invited.length + 1;
+  const sizes = computeGroupSizes(totalWithMe);
+  const mySize = sizes[0] || 2;
+  let attempts = 0, others;
+  do {
+    others = shuffle(invited).slice(0, Math.max(mySize - 1, 0));
+    attempts++;
+  } while (attempts < 6 && prevMyGroupKey && groupSetKey(others) === prevMyGroupKey);
+  myGroup = [{ name: ME.name || 'You', av: ME.av || selectedAv, isMe: true }, ...others];
+  prevMyGroupKey = groupSetKey(others);
+
+  const memWrap = document.getElementById('prGroupMembers');
+  memWrap.innerHTML = myGroup.map(m => `<div class="ss-member-chip"><div class="ss-member-av">${m.av}</div>${m.isMe ? 'You' : m.name}</div>`).join('');
+
+  turnOrder = shuffle(myGroup);
+  turnIdx = 0;
+  runTurn();
+}
+function runTurn() {
+  clearInterval(turnTimerInterval);
+  const area = document.getElementById('turnArea');
+  if (turnIdx >= turnOrder.length) {
+    area.innerHTML = `<div class="turn-card">
+        <div class="turn-emoji">✅</div>
+        <div class="turn-title">Round complete!</div>
+        <div class="turn-sub">Waiting for the host to start the next round...</div>
+        <button class="btn btn-outline" style="margin-top:14px" onclick="demoNextRound()">Demo: next round ›</button>
+      </div>`;
+    return;
+  }
+  const person = turnOrder[turnIdx];
+  if (person.isMe) {
+    area.innerHTML = `<div class="turn-card mine">
+        <div class="turn-emoji">🎤</div>
+        <div class="turn-title">Your turn!</div>
+        <div class="turn-sub">Share your answer with the group</div>
+        <div class="turn-timer" id="turnTimer">0:${String(DEMO_TURN_SECONDS).padStart(2,'0')}</div>
+        <button class="btn btn-dark" style="margin-top:14px" onclick="finishMyTurn()">I'm done sharing ›</button>
+      </div>`;
+  } else {
+    area.innerHTML = `<div class="turn-card">
+        <div class="turn-emoji">👂</div>
+        <div class="turn-title">It's ${person.name}'s turn</div>
+        <div class="turn-sub">Listen while they share</div>
+        <div class="turn-timer" id="turnTimer">0:${String(DEMO_TURN_SECONDS).padStart(2,'0')}</div>
+      </div>`;
+  }
+  startTurnTimer(DEMO_TURN_SECONDS, advanceTurn);
+}
+function startTurnTimer(seconds, onDone) {
+  clearInterval(turnTimerInterval);
+  let t = seconds;
+  turnTimerInterval = setInterval(() => {
+    t--;
+    const el = document.getElementById('turnTimer');
+    if (el) el.textContent = '0:' + String(Math.max(t, 0)).padStart(2, '0');
+    if (t <= 0) { clearInterval(turnTimerInterval); onDone(); }
+  }, 1000);
+}
+function advanceTurn() { turnIdx++; runTurn(); }
+function finishMyTurn() { clearInterval(turnTimerInterval); advanceTurn(); }
+function demoNextRound() {
+  playerRoundIdx++;
+  if (playerRoundIdx >= sessionPrompts.length) { show('player-finish'); return; }
+  loadPlayerRound();
+}
+</script>
+</body>
+</html>
