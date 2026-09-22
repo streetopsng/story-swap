@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../common/Button';
+import { closeGummyGumSession } from '../../lib/gummygumSession';
 
 export default function HostFinish() {
   const navigate = useNavigate();
@@ -31,10 +32,10 @@ export default function HostFinish() {
 
           <Button
             variant="orange"
-            onClick={() => navigate('/')}
+            onClick={() => closeGummyGumSession()}
             className="py-4 text-base max-w-xs mx-auto"
           >
-            Back to home
+            Done — Return to GummyGum →
           </Button>
         </section>
       </div>

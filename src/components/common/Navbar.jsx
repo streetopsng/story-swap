@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { returnToGummyGum } from '../../lib/gummygumSession';
 
 export default function Navbar({ contextText = 'Story Swap', showBack = false, onBack, maxWidthClass = 'max-w-[430px] md:max-w-5xl' }) {
   const navigate = useNavigate();
@@ -28,9 +29,19 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
           GummyGum
         </span>
       </div>
-      <span className="text-[11px] md:text-[12px] font-bold text-[#999999] tracking-wider uppercase truncate max-w-[200px] md:max-w-xs">
-        {contextText}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-[11px] md:text-[12px] font-bold text-[#999999] tracking-wider uppercase truncate max-w-[160px] md:max-w-xs hidden sm:inline">
+          {contextText}
+        </span>
+        <button
+          type="button"
+          onClick={() => returnToGummyGum()}
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+          title="Back to GummyGum"
+        >
+          <span>← Back to GummyGum</span>
+        </button>
+      </div>
     </header>
   );
 }

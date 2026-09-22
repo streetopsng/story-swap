@@ -10,38 +10,67 @@ import {
   subscribeParticipants,
   joinSession,
 } from '../../firebase/sessionService';
+import { returnToGummyGum, getGummyGumSession } from '../../lib/gummygumSession';
 
 export default function PlayerJoinFlow() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const ggSession = getGummyGumSession();
+  const queryEmail = (searchParams.get('email') || ggSession?.player?.email || '').toLowerCase().trim();
+  const queryName = searchParams.get('name') || ggSession?.player?.name || '';
+
   // Persistent player identity in localStorage
   const savedIdentity = useMemo(() => {
     try {
       const data = localStorage.getItem(`story_swap_player_${sessionId}`);
-      return data ? JSON.parse(data) : null;
+      if (data) return JSON.parse(data);
+      if (queryEmail) {
+        const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
+        const savedN = localStorage.getItem(`story_swap_name_${queryEmail}`) || queryName;
+        const joined = localStorage.getItem(`story_swap_joined_${sessionId}_${queryEmail}`) === 'true';
+        if (joined && savedAv) {
+          return { email: queryEmail, name: savedN, avatar: savedAv };
+        }
+      }
+      return null;
     } catch {
       return null;
     }
-  }, [sessionId]);
+  }, [sessionId, queryEmail, queryName]);
 
-  // Player step state: 'home' | 'email' | 'identity' | 'saving' | 'lobby' | 'round' | 'finish'
-  const [step, setStep] = useState(savedIdentity ? 'lobby' : 'home');
+  // Player step state: directly go to 'lobby' if already joined, or 'identity' (pre-filled) to pick avatar
+  const [step, setStep] = useState(savedIdentity ? 'lobby' : 'identity');
 
   const [session, setSession] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
 
   // Form states
-  const [email, setEmail] = useState(savedIdentity?.email || '');
-  const [name, setName] = useState(savedIdentity?.name || '');
-  const [avatar, setAvatar] = useState(savedIdentity?.avatar || '🙂');
+  const [email, setEmail] = useState(savedIdentity?.email || queryEmail || '');
+  const [name, setName] = useState(savedIdentity?.name || queryName || '');
+  const [avatar, setAvatar] = useState(() => {
+    if (savedIdentity?.avatar) return savedIdentity.avatar;
+    if (queryEmail) {
+      const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
+      if (savedAv) return savedAv;
+    }
+    return '🙂';
+  });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
   // Turn state for current round
   const [turnIndex, setTurnIndex] = useState(0);
   const [turnTimeLeft, setTurnTimeLeft] = useState(60);
   const timerRef = useRef(null);
+
+  // Auto-register saved identity into session if returning
+  useEffect(() => {
+    if (savedIdentity && sessionId) {
+      joinSession(sessionId, savedIdentity).catch(() => {});
+    }
+  }, [savedIdentity, sessionId]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -120,8 +149,9 @@ export default function PlayerJoinFlow() {
 
     setStep('saving');
 
+    const normEmail = email.trim().toLowerCase();
     const identity = {
-      email: email.trim().toLowerCase(),
+      email: normEmail,
       name: name.trim(),
       avatar,
     };
@@ -129,6 +159,11 @@ export default function PlayerJoinFlow() {
     try {
       await joinSession(sessionId, identity);
       localStorage.setItem(`story_swap_player_${sessionId}`, JSON.stringify(identity));
+      if (normEmail) {
+        localStorage.setItem(`story_swap_avatar_${normEmail}`, avatar);
+        localStorage.setItem(`story_swap_name_${normEmail}`, name.trim());
+        localStorage.setItem(`story_swap_joined_${sessionId}_${normEmail}`, 'true');
+      }
       setTimeout(() => {
         if (session?.status === 'in-progress') {
           setStep('round');
@@ -334,14 +369,29 @@ export default function PlayerJoinFlow() {
         {/* ── STEP 5: PLAYER LOBBY ── */}
         {step === 'lobby' && (
           <div className="flex-1 flex flex-col justify-between p-4 md:p-8">
-            <header className="text-center pt-2 pb-2 shrink-0">
-              <div className="text-[10px] md:text-[12px] font-bold tracking-widest uppercase text-[#999999]">
-                Session
+            <header className="pb-2 shrink-0">
+              <div className="flex items-center justify-between pb-2">
+                <button
+                  type="button"
+                  onClick={() => returnToGummyGum()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+                  title="Back to GummyGum"
+                >
+                  <span>← Back to GummyGum</span>
+                </button>
+                <span className="text-[11px] font-extrabold text-[#999999] uppercase tracking-wider">
+                  Story Swap
+                </span>
               </div>
-              <div className="text-[18px] md:text-[24px] font-black text-[#1A1A1A] flex items-center justify-center gap-2 mt-1">
-                <span className="w-2 h-2 rounded-full bg-[#F5821F]" />
-                <span>{session?.name || 'Team Bonding'}</span>
-                <span className="w-2 h-2 rounded-full bg-[#F5821F]" />
+              <div className="text-center">
+                <div className="text-[10px] md:text-[12px] font-bold tracking-widest uppercase text-[#999999]">
+                  Session
+                </div>
+                <div className="text-[18px] md:text-[24px] font-black text-[#1A1A1A] flex items-center justify-center gap-2 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-[#F5821F]" />
+                  <span>{session?.name || 'Team Bonding'}</span>
+                  <span className="w-2 h-2 rounded-full bg-[#F5821F]" />
+                </div>
               </div>
             </header>
 
@@ -518,8 +568,8 @@ export default function PlayerJoinFlow() {
             </div>
 
             <footer className="pt-6 max-w-sm mx-auto w-full">
-              <Button variant="orange" onClick={() => navigate('/')} className="py-4 text-base">
-                Back to start
+              <Button variant="orange" onClick={() => returnToGummyGum()} className="py-4 text-base">
+                Done — Return to GummyGum →
               </Button>
             </footer>
           </div>
