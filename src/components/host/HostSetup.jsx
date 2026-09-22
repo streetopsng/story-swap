@@ -7,6 +7,7 @@ import Modal from '../common/Modal';
 import Toast from '../common/Toast';
 import { CATEGORIES } from '../../utils/questionBank';
 import { createSession } from '../../firebase/sessionService';
+import { sendBulkSessionInvitations, isBrevoConfigured } from '../../services/emailService';
 
 export default function HostSetup() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function HostSetup() {
   const [roundCount, setRoundCount] = useState(3);
   const [toastMsg, setToastMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoEmailInvites, setAutoEmailInvites] = useState(isBrevoConfigured);
 
   // Real teammate list (initialized empty - no mock data)
   const [teammates, setTeammates] = useState([]);
@@ -159,7 +161,18 @@ export default function HostSetup() {
         customQuestions,
       });
 
-      if (selectedTeammates.length > 0) {
+      if (autoEmailInvites && isBrevoConfigured && selectedTeammates.length > 0) {
+        // Send email invitations via Brevo in background
+        sendBulkSessionInvitations({
+          recipients: selectedTeammates,
+          sessionName: sessionName.trim() || 'Team Bonding',
+          sessionId,
+        }).catch((err) => {
+          console.error('Failed to send email invites:', err);
+        });
+
+        showToast(`Session created! Emailed invites to ${selectedTeammates.length} teammate${selectedTeammates.length === 1 ? '' : 's'}.`);
+      } else if (selectedTeammates.length > 0) {
         showToast(`Session created for ${selectedTeammates.length} teammate${selectedTeammates.length === 1 ? '' : 's'}`);
       } else {
         showToast('Session created! Copy the invite link to invite teammates.');
@@ -382,6 +395,20 @@ export default function HostSetup() {
                 <span>Invited teammates:</span>
                 <strong className="text-[#1A1A1A]">{selectedCount} ready to invite</strong>
               </div>
+
+              {isBrevoConfigured && selectedCount > 0 && (
+                <label className="flex items-start gap-2.5 p-3 rounded-xl bg-[#FAF7F2] border border-[#E0DBD4] text-xs font-semibold text-[#1A1A1A] cursor-pointer hover:border-[#F5821F] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={autoEmailInvites}
+                    onChange={(e) => setAutoEmailInvites(e.target.checked)}
+                    className="accent-[#F5821F] w-4 h-4 mt-0.5 rounded cursor-pointer shrink-0"
+                  />
+                  <span>
+                    ✉️ Automatically email game link to invited teammates via Brevo
+                  </span>
+                </label>
+              )}
 
               <Button
                 variant="orange"

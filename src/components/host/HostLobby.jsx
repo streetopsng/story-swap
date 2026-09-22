@@ -8,6 +8,11 @@ import {
   subscribeParticipants,
   startSession,
 } from '../../firebase/sessionService';
+import {
+  sendSessionInvitation,
+  sendBulkSessionInvitations,
+  isBrevoConfigured,
+} from '../../services/emailService';
 
 export default function HostLobby() {
   const { sessionId } = useParams();
@@ -17,6 +22,9 @@ export default function HostLobby() {
   const [participants, setParticipants] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
   const [isStarting, setIsStarting] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState({});
+  const [isBulkSending, setIsBulkSending] = useState(false);
+  const [recentlySent, setRecentlySent] = useState({});
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -59,6 +67,62 @@ export default function HostLobby() {
       showToast('Invite link copied to clipboard!');
     } else {
       showToast(`Link: ${inviteUrl}`);
+    }
+  };
+
+  const pendingParticipants = participants.filter(
+    (p) => p.status !== 'joined' && (p.email || p.id?.includes('@'))
+  );
+  const pendingCount = pendingParticipants.length;
+
+  const handleSendSingleInvite = async (participant) => {
+    const pEmail = participant.email || (participant.id?.includes('@') ? participant.id : null);
+    if (!pEmail) {
+      showToast('No email address found for this teammate');
+      return;
+    }
+    const key = pEmail.toLowerCase();
+    setSendingEmails((prev) => ({ ...prev, [key]: true }));
+    try {
+      await sendSessionInvitation({
+        recipient: { ...participant, email: pEmail },
+        sessionName: session?.name || 'Team Bonding',
+        sessionId,
+      });
+      setRecentlySent((prev) => ({ ...prev, [key]: true }));
+      showToast(`Invitation sent to ${pEmail}!`);
+    } catch (err) {
+      console.error('Failed to send email:', err);
+      showToast(`Email error: ${err.message}`);
+    } finally {
+      setSendingEmails((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
+  const handleSendBulkInvites = async () => {
+    if (pendingCount === 0) {
+      showToast('No pending teammates with email addresses found');
+      return;
+    }
+    setIsBulkSending(true);
+    try {
+      const res = await sendBulkSessionInvitations({
+        recipients: pendingParticipants,
+        sessionName: session?.name || 'Team Bonding',
+        sessionId,
+      });
+      const newSent = {};
+      pendingParticipants.forEach((p) => {
+        const e = (p.email || p.id)?.toLowerCase();
+        if (e) newSent[e] = true;
+      });
+      setRecentlySent((prev) => ({ ...prev, ...newSent }));
+      showToast(`Sent ${res.sent} invitation email${res.sent === 1 ? '' : 's'}!`);
+    } catch (err) {
+      console.error('Failed bulk emails:', err);
+      showToast('Error sending email invitations');
+    } finally {
+      setIsBulkSending(false);
     }
   };
 
@@ -154,14 +218,29 @@ export default function HostLobby() {
           {/* Right Column (Live Roster Grid) */}
           <div className="md:col-span-7 flex flex-col">
             <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4] flex-1 flex flex-col">
-              <div className="flex items-center justify-between mb-3 shrink-0">
-                <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555]">
-                  Live Teammate Roster ({participants.length})
+              <div className="flex items-center justify-between mb-3 shrink-0 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555]">
+                    Live Teammate Roster ({participants.length})
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-[#22A855] font-bold">
+                    <span className="w-2 h-2 rounded-full bg-[#22A855] animate-blink" />
+                    Live sync
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-[#22A855] font-bold">
-                  <span className="w-2 h-2 rounded-full bg-[#22A855] animate-blink" />
-                  Live sync
-                </div>
+
+                {isBrevoConfigured && pendingCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleSendBulkInvites}
+                    disabled={isBulkSending}
+                    className="px-2.5 py-1 bg-[#FAF7F2] border border-[#F5821F]/40 hover:border-[#F5821F] text-[#F5821F] hover:text-[#E8710A] rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                    title="Send email invitation to all pending teammates via Brevo"
+                  >
+                    <span>✉️</span>
+                    <span>{isBulkSending ? 'Sending emails...' : `Email pending (${pendingCount})`}</span>
+                  </button>
+                )}
               </div>
 
               {/* Roster Container */}
@@ -178,13 +257,14 @@ export default function HostLobby() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     {participants.map((p) => {
                       const isJoined = p.status === 'joined';
+                      const pEmailKey = (p.email || p.id)?.toLowerCase();
                       return (
                         <div
                           key={p.id || p.email}
                           className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${
                             isJoined
                               ? 'bg-[#FAF7F2] border-[#F5821F]/40 shadow-xs'
-                              : 'bg-neutral-50/70 border-[#E0DBD4] opacity-50'
+                              : 'bg-neutral-50/70 border-[#E0DBD4] opacity-75'
                           }`}
                         >
                           <div
@@ -199,18 +279,35 @@ export default function HostLobby() {
                               {p.name || p.email}
                             </div>
                             <div className="text-[11px] text-[#999999] truncate">
-                              {isJoined ? 'Ready in lobby' : 'Invite pending'}
+                              {isJoined ? 'Ready in lobby' : (p.email || 'Invite pending')}
                             </div>
                           </div>
-                          <div className="shrink-0">
+                          <div className="shrink-0 flex items-center gap-1.5">
                             {isJoined ? (
                               <span className="px-2 py-0.5 rounded-full bg-[#22A855]/10 text-[#22A855] text-[11px] font-extrabold">
                                 Ready ✓
                               </span>
                             ) : (
-                              <span className="text-[11px] text-[#999999] font-medium">
-                                Waiting...
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[11px] text-[#999999] font-medium hidden sm:inline">
+                                  Waiting...
+                                </span>
+                                {isBrevoConfigured && (p.email || p.id?.includes('@')) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSendSingleInvite(p)}
+                                    disabled={sendingEmails[pEmailKey]}
+                                    className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#FAF7F2] border border-[#E0DBD4] text-[#F5821F] hover:border-[#F5821F] cursor-pointer disabled:opacity-50 transition-all shadow-xs"
+                                    title={`Send invitation email to ${p.email || p.id}`}
+                                  >
+                                    {sendingEmails[pEmailKey]
+                                      ? '...'
+                                      : recentlySent[pEmailKey]
+                                      ? 'Sent ✓'
+                                      : 'Invite ✉️'}
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
