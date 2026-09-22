@@ -2,6 +2,7 @@ import { db, isFirebaseConfigured } from './config';
 import {
   collection,
   doc,
+  getDoc,
   setDoc,
   updateDoc,
   onSnapshot,
@@ -54,15 +55,35 @@ export function generateSessionId() {
 }
 
 /**
+ * Get existing session details once
+ */
+export async function getSession(sessionId) {
+  if (isFirebaseConfigured && db) {
+    try {
+      const sessionRef = doc(db, 'sessions', sessionId);
+      const snap = await getDoc(sessionRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  return getLocalStore(`session_${sessionId}`, null);
+}
+
+/**
  * Create a new game session
  */
 export async function createSession({
+  sessionId: customSessionId,
   name = 'Team Bonding',
   roundCount = 3,
   invitedEmails = [],
   customQuestions = {},
-}) {
-  const sessionId = generateSessionId();
+} = {}) {
+  const sessionId = customSessionId || generateSessionId();
   const prompts = buildSessionPrompts(roundCount, customQuestions);
 
   const sessionData = {
