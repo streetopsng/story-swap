@@ -9,6 +9,9 @@ import PlayerJoinFlow from './components/player/PlayerJoinFlow';
 import { resolveGummyGumLaunch, returnToGummyGum } from './lib/gummygumSession';
 import { getSession, createSession, subscribeSession } from './firebase/sessionService';
 
+import LoadingScreen from './components/common/LoadingScreen';
+import SessionExpiredModal from './components/modals/SessionExpiredModal';
+
 const GummyGumLockedScreen = () => (
   <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
     <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-[0_4px_0_#E0DBD4]">
@@ -17,32 +20,45 @@ const GummyGumLockedScreen = () => (
       <p className="text-[#555] text-sm leading-relaxed">
         This experience is exclusively available through the GummyGum Hub. Open it from your GummyGum dashboard to start or join a session.
       </p>
-      <a href="https://gummygum.app" className="inline-block mt-3 px-6 py-3 rounded-full bg-[#F5821F] text-[#1A1A1A] font-extrabold hover:bg-[#E07212] transition-colors shadow-sm">
+      <a href="https://gummygum.app" className="inline-block mt-3 px-6 py-3 rounded-xl bg-[#F5821F] text-[#1A1A1A] font-extrabold hover:bg-[#E07212] transition-colors shadow-sm">
         Go to GummyGum
       </a>
     </div>
   </div>
 );
 
-const GummyGumCancelledScreen = () => (
+const GummyGumCancelledScreen = ({ isHost = false }) => (
   <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
     <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-[0_4px_0_#E0DBD4]">
       <div className="text-5xl">👋</div>
       <h1 className="text-2xl font-black text-[#1A1A1A]">Session Ended</h1>
       <p className="text-[#555] text-sm leading-relaxed">
-        This session was ended by the host. You can safely close this tab now.
+        {isHost
+          ? 'This session was ended. You can return to GummyGum to launch another experience.'
+          : 'This session was ended by the host. You can safely close this tab now.'}
       </p>
-      <button
-        onClick={() => returnToGummyGum()}
-        className="inline-block mt-3 px-6 py-3 rounded-full bg-[#F5821F] text-[#1A1A1A] font-extrabold hover:bg-[#E07212] transition-colors shadow-sm cursor-pointer"
-      >
-        Return to GummyGum
-      </button>
+      {isHost ? (
+        <button
+          onClick={() => returnToGummyGum()}
+          className="inline-block mt-3 px-6 py-3 rounded-xl bg-[#F5821F] text-[#1A1A1A] font-extrabold hover:bg-[#E07212] transition-colors shadow-sm cursor-pointer"
+        >
+          Return to GummyGum
+        </button>
+      ) : (
+        <button
+          onClick={() => {
+            try { window.close(); } catch {}
+          }}
+          className="inline-block mt-3 px-6 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 border border-[#E0DBD4] text-stone-700 font-bold transition-colors cursor-pointer text-sm"
+        >
+          Close Tab
+        </button>
+      )}
     </div>
   </div>
 );
 
-function AppCoordinator({ setGgSessionState, setGgCancelled }) {
+function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
   const navigate = useNavigate();
   const location = useLocation();
   const routedRef = useRef(false);
@@ -64,6 +80,23 @@ function AppCoordinator({ setGgSessionState, setGgCancelled }) {
 
       if (code) {
         routedRef.current = true;
+        // Listen to session for cancellation and lobby expiration
+        subscribeSession(code, (sessData) => {
+          if (!sessData || sessData.status === 'cancelled' || sessData.status === 'ended') {
+            setGgCancelled(true);
+            return;
+          }
+          if (sessData.status === 'expired') {
+            setGgExpired(true);
+            return;
+          }
+          // Idle lobby sessions expire after 20 minutes of inactivity
+          if (sessData.status === 'lobby' && sessData.createdAt && Date.now() - sessData.createdAt >= 20 * 60 * 1000) {
+            setGgExpired(true);
+            return;
+          }
+        });
+
         if (isHost) {
           try {
             const existing = await getSession(code);
@@ -81,18 +114,12 @@ function AppCoordinator({ setGgSessionState, setGgCancelled }) {
           }
           navigate(`/host/${code}/lobby`, { replace: true });
         } else {
-          // Listen to session to detect cancellation
-          subscribeSession(code, (sessData) => {
-            if (!sessData || sessData.status === 'cancelled' || sessData.status === 'ended') {
-              setGgCancelled(true);
-            }
-          });
           const search = window.location.search;
           navigate(`/join/${code}${search}`, { replace: true });
         }
       }
     });
-  }, [navigate, location, setGgSessionState, setGgCancelled]);
+  }, [navigate, location, setGgSessionState, setGgCancelled, setGgExpired]);
 
   return null;
 }
@@ -101,6 +128,7 @@ export default function App() {
   const [ggChecked, setGgChecked] = useState(false);
   const [ggSession, setGgSession] = useState(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const handleGgSession = (sess) => {
     setGgSession(sess);
@@ -110,11 +138,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#EDEAE4] text-[#1A1A1A] flex flex-col items-center justify-start antialiased selection:bg-[#F5821F] selection:text-[#1A1A1A]">
       <BrowserRouter>
-        <AppCoordinator setGgSessionState={handleGgSession} setGgCancelled={setIsCancelled} />
+        <AppCoordinator setGgSessionState={handleGgSession} setGgCancelled={setIsCancelled} setGgExpired={setIsSessionExpired} />
         {!ggChecked ? (
-          <div className="min-h-screen w-full bg-[#EDEAE4]" />
+          <LoadingScreen message="Connecting to GummyGum..." />
         ) : isCancelled ? (
-          <GummyGumCancelledScreen />
+          <GummyGumCancelledScreen isHost={Boolean(ggSession?.isHost)} />
         ) : !ggSession ? (
           <GummyGumLockedScreen />
         ) : (
@@ -133,6 +161,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         )}
+        {isSessionExpired && <SessionExpiredModal isHost={Boolean(ggSession?.isHost)} />}
       </BrowserRouter>
     </div>
   );
