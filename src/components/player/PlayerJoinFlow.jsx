@@ -5,12 +5,13 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import Toast from '../common/Toast';
 import AvatarPickerModal from '../common/AvatarPickerModal';
+import GameRulesModal from '../modals/GameRulesModal';
 import {
   subscribeSession,
   subscribeParticipants,
   joinSession,
 } from '../../firebase/sessionService';
-import { returnToGummyGum, getGummyGumSession } from '../../lib/gummygumSession';
+import { getGummyGumSession } from '../../lib/gummygumSession';
 
 export default function PlayerJoinFlow() {
   const { sessionId } = useParams();
@@ -59,6 +60,7 @@ export default function PlayerJoinFlow() {
     return '🙂';
   });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   // Turn state for current round
   const [turnIndex, setTurnIndex] = useState(0);
@@ -336,7 +338,7 @@ export default function PlayerJoinFlow() {
               <Button
                 variant="orange"
                 disabled={name.trim().length < 2}
-                onClick={handleSaveIdentity}
+                onClick={() => setShowRulesModal(true)}
                 className="py-4 text-base"
               >
                 Enter the lobby →
@@ -352,6 +354,16 @@ export default function PlayerJoinFlow() {
               selectedAvatar={avatar}
               onSelect={(newAv) => setAvatar(newAv)}
             />
+
+            {showRulesModal && (
+              <GameRulesModal
+                name={name.trim()}
+                onConfirm={() => {
+                  setShowRulesModal(false);
+                  handleSaveIdentity();
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -373,14 +385,9 @@ export default function PlayerJoinFlow() {
           <div className="flex-1 flex flex-col justify-between p-4 md:p-8">
             <header className="pb-2 shrink-0">
               <div className="flex items-center justify-between pb-2">
-                <button
-                  type="button"
-                  onClick={() => returnToGummyGum()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
-                  title="Back to GummyGum"
-                >
-                  <span>← Back to GummyGum</span>
-                </button>
+                <span className="text-xs font-black text-[#F5821F] uppercase tracking-wider">
+                  GummyGum
+                </span>
                 <span className="text-[11px] font-extrabold text-[#999999] uppercase tracking-wider">
                   Story Swap
                 </span>
@@ -566,12 +573,21 @@ export default function PlayerJoinFlow() {
                 <p className="text-[13px] md:text-[15px] text-[#555555] mt-3 leading-relaxed max-w-md mx-auto">
                   Thanks for sharing with your team — hope you learned something new about each other.
                 </p>
+                <p className="text-xs font-bold text-[#1A1A1A] mt-4">
+                  You can safely close this tab now.
+                </p>
               </section>
             </div>
 
             <footer className="pt-6 max-w-sm mx-auto w-full">
-              <Button variant="orange" onClick={() => returnToGummyGum()} className="py-4 text-base">
-                Done — Return to GummyGum →
+              <Button
+                variant="outline"
+                onClick={() => {
+                  try { window.close(); } catch {}
+                }}
+                className="py-3.5 text-sm font-bold w-full rounded-xl"
+              >
+                Close Tab
               </Button>
             </footer>
           </div>

@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { returnToGummyGum } from '../../lib/gummygumSession';
+import { returnToGummyGum, getGummyGumSession } from '../../lib/gummygumSession';
 
 export default function Navbar({ contextText = 'Story Swap', showBack = false, onBack, maxWidthClass = 'max-w-[430px] md:max-w-5xl' }) {
   const navigate = useNavigate();
+  const isHost = Boolean(getGummyGumSession()?.isHost);
 
   const handleBack = () => {
     if (onBack) {
@@ -33,14 +34,16 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
         <span className="text-[11px] md:text-[12px] font-bold text-[#999999] tracking-wider uppercase truncate max-w-[160px] md:max-w-xs hidden sm:inline">
           {contextText}
         </span>
-        <button
-          type="button"
-          onClick={() => returnToGummyGum()}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
-          title="Back to GummyGum"
-        >
-          <span>← Back to GummyGum</span>
-        </button>
+        {isHost && (
+          <button
+            type="button"
+            onClick={() => returnToGummyGum()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
+            title="Back to GummyGum"
+          >
+            <span>← Back to GummyGum</span>
+          </button>
+        )}
       </div>
     </header>
   );
