@@ -81,6 +81,7 @@ export async function createSession({
   name = 'Team Bonding',
   roundCount = 3,
   invitedEmails = [],
+  invitedCount = null,
   customQuestions = {},
 } = {}) {
   const sessionId = customSessionId || generateSessionId();
@@ -92,6 +93,7 @@ export async function createSession({
     roundCount: Number(roundCount),
     prompts,
     customQuestions,
+    invitedCount: invitedCount ? Number(invitedCount) : (invitedEmails.length || null),
     status: 'lobby', // 'lobby' | 'in-progress' | 'completed'
     currentRound: 0,
     groups: [],
@@ -368,3 +370,29 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
     setLocalStore(`session_${sessionId}`, { ...session, ...updates });
   }
 }
+
+/**
+ * End session and mark cancelled/ended
+ */
+export async function endSession(sessionId) {
+  const updates = {
+    status: 'ended',
+    updatedAt: Date.now(),
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const sessionRef = doc(db, 'sessions', sessionId);
+      await updateDoc(sessionRef, updates);
+      return;
+    } catch (error) {
+      console.error('Firestore endSession error:', error);
+    }
+  }
+
+  const session = getLocalStore(`session_${sessionId}`);
+  if (session) {
+    setLocalStore(`session_${sessionId}`, { ...session, ...updates });
+  }
+}
+
