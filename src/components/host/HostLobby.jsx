@@ -7,12 +7,18 @@ import {
   subscribeSession,
   subscribeParticipants,
   startSession,
+  endSession,
 } from '../../firebase/sessionService';
 import {
   sendSessionInvitation,
   sendBulkSessionInvitations,
   isBrevoConfigured,
 } from '../../services/emailService';
+import {
+  getGummyGumSession,
+  closeGummyGumSession,
+  returnToGummyGum,
+} from '../../lib/gummygumSession';
 
 export default function HostLobby() {
   const { sessionId } = useParams();
@@ -25,6 +31,7 @@ export default function HostLobby() {
   const [sendingEmails, setSendingEmails] = useState({});
   const [isBulkSending, setIsBulkSending] = useState(false);
   const [recentlySent, setRecentlySent] = useState({});
+  const ggSession = getGummyGumSession();
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -55,16 +62,24 @@ export default function HostLobby() {
     };
   }, [sessionId, navigate]);
 
+  const queryParams = new URLSearchParams(window.location.search);
+  const queryInvited = queryParams.get('invitedCount');
   const joinedParticipants = participants.filter((p) => p.status === 'joined');
   const joinedCount = joinedParticipants.length;
-  const totalCount = participants.length;
-  const progressPercent = totalCount > 0 ? Math.round((joinedCount / totalCount) * 100) : (joinedCount > 0 ? 100 : 0);
+  const targetInvited =
+    session?.invitedCount ||
+    ggSession?.invitedCount ||
+    (queryInvited ? parseInt(queryInvited, 10) : null) ||
+    Math.max(participants.length, 1);
+  const totalCount = targetInvited;
+  const progressPercent = Math.min(100, Math.round((joinedCount / totalCount) * 100));
 
   const handleCopyInviteLink = () => {
-    const inviteUrl = `${window.location.origin}/join/${sessionId}`;
+    const hubUrl = ggSession?.hubUrl || 'https://gummygum.app';
+    const inviteUrl = `${hubUrl}/join?pin=${sessionId}`;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(inviteUrl);
-      showToast('Invite link copied to clipboard!');
+      showToast('1-click invite link copied to clipboard!');
     } else {
       showToast(`Link: ${inviteUrl}`);
     }
@@ -177,20 +192,30 @@ export default function HostLobby() {
               )}
 
               {/* Share Invite Code Box */}
-              <div className="mt-4 pt-4 border-t border-[#E0DBD4] bg-[#FAF7F2] rounded-xl p-3 text-left">
-                <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider mb-1">
-                  Session Invite Link
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-mono font-bold text-[#1A1A1A] truncate">
-                    {window.location.origin}/join/{sessionId}
+              <div className="mt-4 pt-4 border-t border-[#E0DBD4] bg-[#FAF7F2] rounded-xl p-3 text-left space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider">
+                    Room PIN
+                  </div>
+                  <span className="text-base font-black font-mono text-[#F5821F] tracking-widest">
+                    {sessionId}
                   </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#E0DBD4]/60">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider mb-0.5">
+                      1-Click Invite Link
+                    </div>
+                    <span className="text-xs font-mono font-bold text-[#1A1A1A] truncate block">
+                      {(ggSession?.hubUrl || 'https://gummygum.app')}/join?pin={sessionId}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCopyInviteLink}
-                    className="px-2.5 py-1 bg-white border border-[#E0DBD4] rounded-lg text-xs font-bold text-[#F5821F] hover:text-[#E8710A] shrink-0 cursor-pointer shadow-xs"
+                    className="px-2.5 py-1.5 bg-white border border-[#E0DBD4] rounded-lg text-xs font-bold text-[#F5821F] hover:text-[#E8710A] shrink-0 cursor-pointer shadow-xs hover:bg-[#FDE8D0]/30 transition-all"
                   >
-                    Copy
+                    Copy Link
                   </button>
                 </div>
               </div>
@@ -206,6 +231,17 @@ export default function HostLobby() {
               >
                 {isStarting ? 'Starting...' : 'Start game ›'}
               </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('End this session and return to GummyGum?')) {
+                    endSession(sessionId).finally(() => closeGummyGumSession());
+                  }
+                }}
+                className="w-full py-2.5 rounded-full border border-[#E0DBD4] hover:border-red-300 text-xs font-bold text-[#777] hover:text-red-600 bg-white hover:bg-red-50/50 transition-all cursor-pointer shadow-xs"
+              >
+                Close Session & Return to GummyGum
+              </button>
               <p className="text-[12px] text-[#999999] text-center leading-relaxed">
                 {joinedCount === 0
                   ? 'Waiting for players to join — copy the link above and send it to your team.'
@@ -330,6 +366,17 @@ export default function HostLobby() {
           >
             {isStarting ? 'Starting...' : 'Start game ›'}
           </Button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('End this session and return to GummyGum?')) {
+                endSession(sessionId).finally(() => closeGummyGumSession());
+              }
+            }}
+            className="w-full py-2.5 rounded-full border border-[#E0DBD4] text-xs font-bold text-[#777] bg-white cursor-pointer shadow-xs"
+          >
+            Close Session & Return to GummyGum
+          </button>
           <p className="text-[12px] text-[#999999] text-center leading-relaxed">
             {joinedCount === 0
               ? 'Waiting for players to join — copy the invite link above.'
