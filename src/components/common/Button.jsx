@@ -10,7 +10,7 @@ export default function Button({
   ...props
 }) {
   const baseStyles =
-    'w-full py-3.5 px-5 rounded-full text-[15px] font-extrabold cursor-pointer transition-all duration-150 flex items-center justify-center gap-2 select-none';
+    'w-full py-3.5 px-5 rounded-xl text-[15px] font-extrabold cursor-pointer transition-all duration-150 flex items-center justify-center gap-2 select-none';
 
   const variants = {
     orange:

@@ -314,20 +314,22 @@ export default function PlayerJoinFlow() {
                 </button>
               </div>
 
-              {/* Name Input Card */}
-              <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-[0_2px_0_#E0DBD4] md:shadow-none">
-                <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
-                  Your name
-                </label>
-                <Input
-                  id="player-name-input-flow"
-                  placeholder="e.g. Taylor"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  maxLength={24}
-                  className="text-base py-3"
-                />
-              </div>
+              {/* Name Input Card — only if not already provided by GummyGum */}
+              {!queryName && (
+                <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-[0_2px_0_#E0DBD4] md:shadow-none">
+                  <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
+                    Your name
+                  </label>
+                  <Input
+                    id="player-name-input-flow"
+                    placeholder="Enter your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    maxLength={24}
+                    className="text-base py-3"
+                  />
+                </div>
+              )}
             </div>
 
             <footer className="space-y-2 pt-6 max-w-sm mx-auto w-full">
