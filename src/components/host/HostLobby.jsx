@@ -191,17 +191,9 @@ export default function HostLobby() {
                 </div>
               )}
 
-              {/* Share Invite Code Box */}
+              {/* Share Invite Link Box */}
               <div className="mt-4 pt-4 border-t border-[#E0DBD4] bg-[#FAF7F2] rounded-xl p-3 text-left space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider">
-                    Room PIN
-                  </div>
-                  <span className="text-base font-black font-mono text-[#F5821F] tracking-widest">
-                    {sessionId}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#E0DBD4]/60">
+                <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider mb-0.5">
                       1-Click Invite Link
@@ -286,7 +278,7 @@ export default function HostLobby() {
                     <span className="text-3xl block">⏳</span>
                     <p className="text-sm font-semibold text-[#1A1A1A]">No players have entered yet</p>
                     <p className="text-xs max-w-xs mx-auto">
-                      Share the invite link or session code <strong className="text-[#F5821F]">{sessionId}</strong> with your teammates so they can join.
+                      Share the invite link above with your teammates so they can join.
                     </p>
                   </div>
                 ) : (

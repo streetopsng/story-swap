@@ -101,12 +101,10 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
         if (isHost) {
           try {
             const existing = await getSession(code);
-            const isStale = existing && (
-              existing.status === 'expired' ||
-              existing.status === 'ended' ||
-              (existing.status === 'lobby' && existing.createdAt && Date.now() - existing.createdAt >= 20 * 60 * 1000)
-            );
-            if (!existing || isStale) {
+            // Never recreate an existing session here, even if ended/expired —
+            // that would silently resurrect a cancelled room instead of letting
+            // the subscribeSession listener above route away from it.
+            if (!existing) {
               const hostName = session?.player?.name || params.get('name') || 'Team';
               await createSession({
                 sessionId: code,
