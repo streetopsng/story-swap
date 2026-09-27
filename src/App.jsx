@@ -80,6 +80,7 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
 
       if (code) {
         routedRef.current = true;
+        setGgExpired(false);
         // Listen to session for cancellation and lobby expiration
         subscribeSession(code, (sessData) => {
           if (!sessData || sessData.status === 'cancelled' || sessData.status === 'ended') {
@@ -100,7 +101,12 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
         if (isHost) {
           try {
             const existing = await getSession(code);
-            if (!existing) {
+            const isStale = existing && (
+              existing.status === 'expired' ||
+              existing.status === 'ended' ||
+              (existing.status === 'lobby' && existing.createdAt && Date.now() - existing.createdAt >= 20 * 60 * 1000)
+            );
+            if (!existing || isStale) {
               const hostName = session?.player?.name || params.get('name') || 'Team';
               await createSession({
                 sessionId: code,
