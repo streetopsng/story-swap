@@ -221,7 +221,7 @@ export default function PlayerJoinFlow() {
         {step === 'home' && (
           <div className="flex-1 flex flex-col justify-between p-6 md:p-12">
             <div className="flex-1 flex items-center justify-center">
-              <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-6 md:p-0 text-center shadow-[0_4px_0_#E0DBD4] md:shadow-none">
+              <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-6 md:p-0 text-center shadow-sm md:shadow-none">
                 <div className="text-5xl md:text-6xl mb-3 md:mb-4">🗣️</div>
                 <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F]">
                   You're invited
@@ -296,7 +296,7 @@ export default function PlayerJoinFlow() {
 
             <div className="flex-1 space-y-4 pt-4 max-w-md mx-auto w-full">
               {/* Avatar Preview Card */}
-              <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-[0_4px_0_#E0DBD4] md:shadow-none flex flex-col items-center">
+              <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none flex flex-col items-center">
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
@@ -318,7 +318,7 @@ export default function PlayerJoinFlow() {
 
               {/* Name Input Card — only if not already provided by GummyGum */}
               {!queryName && (
-                <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-[0_2px_0_#E0DBD4] md:shadow-none">
+                <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-sm md:shadow-none">
                   <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
                     Your name
                   </label>
@@ -406,7 +406,7 @@ export default function PlayerJoinFlow() {
 
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3.5 my-2 max-w-md mx-auto w-full">
               {/* You Card */}
-              <div className="flex items-center gap-3 bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-4 shadow-[0_2px_0_#E0DBD4] md:shadow-none">
+              <div className="flex items-center gap-3 bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-4 shadow-sm md:shadow-none">
                 <div className="w-12 h-12 rounded-full bg-[#FDE8D0] border-2 border-[#F5821F] flex items-center justify-center text-2xl shrink-0">
                   {avatar}
                 </div>
@@ -475,7 +475,7 @@ export default function PlayerJoinFlow() {
 
             <div className="flex-1 overflow-y-auto no-scrollbar py-2 space-y-4 max-w-md mx-auto w-full">
               {/* Prompt & Group Section */}
-              <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 md:p-6 shadow-[0_2px_0_#E0DBD4] md:shadow-none">
+              <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 md:p-6 shadow-sm md:shadow-none">
                 <div className="text-center text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#F5821F] mb-1">
                   {currentPrompt.cat}
                 </div>
@@ -508,7 +508,7 @@ export default function PlayerJoinFlow() {
 
               {/* Turn Card */}
               {turnIndex >= myGroup.length && myGroup.length > 0 ? (
-                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-[0_3px_0_#E0DBD4] md:shadow-none">
+                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
                   <div className="text-4xl mb-2">✅</div>
                   <div className="text-[18px] font-black text-[#1A1A1A]">Round complete!</div>
                   <div className="text-[13px] text-[#555555] mt-1">
@@ -516,7 +516,7 @@ export default function PlayerJoinFlow() {
                   </div>
                 </section>
               ) : isMyTurn ? (
-                <section className="bg-[#FDE8D0] border-2 border-[#F5821F] rounded-[24px] p-6 md:p-8 text-center shadow-[0_3px_0_#F5821F]">
+                <section className="bg-[#FDE8D0] border-2 border-[#F5821F] rounded-[24px] p-6 md:p-8 text-center shadow-sm">
                   <div className="text-4xl md:text-5xl mb-2">🎤</div>
                   <div className="text-[20px] md:text-[22px] font-black text-[#1A1A1A]">Your turn!</div>
                   <div className="text-[13px] md:text-[14px] text-[#555555] mt-1">
@@ -534,7 +534,7 @@ export default function PlayerJoinFlow() {
                   </Button>
                 </section>
               ) : (
-                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-[0_3px_0_#E0DBD4] md:shadow-none">
+                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-sm md:shadow-none">
                   <div className="text-4xl md:text-5xl mb-2">👂</div>
                   <div className="text-[19px] md:text-[21px] font-black text-[#1A1A1A]">
                     It's {currentSpeaker?.name || 'teammate'}'s turn
@@ -562,7 +562,7 @@ export default function PlayerJoinFlow() {
         {step === 'finish' && (
           <div className="flex-1 flex flex-col justify-between p-6 md:p-12">
             <div className="flex-1 flex items-center justify-center">
-              <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-8 md:p-0 text-center shadow-[0_4px_0_#E0DBD4] md:shadow-none">
+              <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-8 md:p-0 text-center shadow-sm md:shadow-none">
                 <div className="text-5xl md:text-6xl mb-3 md:mb-4">🎉</div>
                 <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F]">
                   Session complete

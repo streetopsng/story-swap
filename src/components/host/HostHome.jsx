@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import { DiceIcon, BulbIcon, BoltIcon } from '../common/Icons';
 
 export default function HostHome() {
   const navigate = useNavigate();
@@ -34,22 +35,22 @@ export default function HostHome() {
 
             {/* Desktop Feature Highlights */}
             <div className="hidden md:grid grid-cols-1 gap-3 mt-8 max-w-md">
-              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3 backdrop-blur-xs">
-                <span className="text-xl">🎲</span>
+              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3">
+                <span className="text-[#1A1A1A] shrink-0 mt-0.5"><DiceIcon className="w-5 h-5" /></span>
                 <div>
                   <div className="text-[13px] font-extrabold text-[#1A1A1A]">Smart Grouping</div>
                   <div className="text-[12px] text-black/70">Automatic 2–3 person breakouts with new pairings every round.</div>
                 </div>
               </div>
-              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3 backdrop-blur-xs">
-                <span className="text-xl">💡</span>
+              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3">
+                <span className="text-[#1A1A1A] shrink-0 mt-0.5"><BulbIcon className="w-5 h-5" /></span>
                 <div>
                   <div className="text-[13px] font-extrabold text-[#1A1A1A]">Curated Prompt Bank</div>
                   <div className="text-[12px] text-black/70">Thoughtful work-culture questions tailored for genuine connection.</div>
                 </div>
               </div>
-              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3 backdrop-blur-xs">
-                <span className="text-xl">⚡</span>
+              <div className="bg-black/10 rounded-2xl p-3.5 flex items-start gap-3">
+                <span className="text-[#1A1A1A] shrink-0 mt-0.5"><BoltIcon className="w-5 h-5" /></span>
                 <div>
                   <div className="text-[13px] font-extrabold text-[#1A1A1A]">Zero Prep for Teammates</div>
                   <div className="text-[12px] text-black/70">Teammates click one link to enter, pick an avatar, and start sharing.</div>

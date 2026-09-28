@@ -118,7 +118,7 @@ export default function HostControl() {
         </div>
 
         {/* Top Prompt Billboard Card */}
-        <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-[0_3px_0_#E0DBD4]">
+        <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-sm">
           <div className="text-[11px] md:text-[13px] font-extrabold tracking-wider uppercase text-[#F5821F] mb-2">
             {currentPrompt.cat}
           </div>

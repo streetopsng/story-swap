@@ -14,11 +14,11 @@ export default function Button({
 
   const variants = {
     orange:
-      'bg-[#F5821F] text-[#1A1A1A] shadow-[0_4px_0_#E8710A] active:translate-y-[2px] active:shadow-[0_2px_0_#E8710A] hover:brightness-105',
+      'bg-[#F5821F] text-[#1A1A1A] border border-[#E8710A]/50 shadow-sm active:translate-y-px hover:brightness-105 hover:shadow-md',
     dark:
-      'bg-[#1A1A1A] text-white shadow-[0_4px_0_#000000] active:translate-y-[2px] active:shadow-[0_2px_0_#000000] hover:bg-[#2a2a2a]',
+      'bg-[#1A1A1A] text-white border border-[#1A1A1A] shadow-sm active:translate-y-px hover:bg-[#2a2a2a] hover:shadow-md',
     outline:
-      'bg-white text-[#1A1A1A] border-2 border-[#E0DBD4] shadow-[0_3px_0_#E0DBD4] active:translate-y-[2px] active:shadow-[0_1px_0_#E0DBD4] hover:bg-neutral-50',
+      'bg-white text-[#1A1A1A] border-2 border-[#E0DBD4] shadow-xs active:translate-y-px hover:bg-neutral-50',
   };
 
   const disabledStyles = disabled

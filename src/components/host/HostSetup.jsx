@@ -8,6 +8,7 @@ import Toast from '../common/Toast';
 import { CATEGORIES } from '../../utils/questionBank';
 import { createSession } from '../../firebase/sessionService';
 import { sendBulkSessionInvitations, isBrevoConfigured } from '../../services/emailService';
+import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon } from '../common/Icons';
 
 export default function HostSetup() {
   const navigate = useNavigate();
@@ -203,7 +204,7 @@ export default function HostSetup() {
           <div className="md:col-span-7 space-y-4">
             
             {/* Session Name Card */}
-            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4]">
+            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm">
               <label htmlFor="session-name-input" className="block text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
                 Session name
               </label>
@@ -218,7 +219,7 @@ export default function HostSetup() {
             </section>
 
             {/* Rounds Card */}
-            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4]">
+            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm">
               <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-1">
                 Rounds
               </div>
@@ -279,7 +280,7 @@ export default function HostSetup() {
           <div className="md:col-span-5 space-y-4">
             
             {/* Teammates Picker Card */}
-            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4]">
+            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm">
               <div className="flex items-center justify-between mb-1">
                 <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555]">
                   Teammates · <span className="text-[#F5821F]">{selectedCount} selected</span>
@@ -302,7 +303,7 @@ export default function HostSetup() {
               <div className="divide-y divide-[#E0DBD4] max-h-56 md:max-h-64 overflow-y-auto no-scrollbar">
                 {teammates.length === 0 ? (
                   <div className="py-8 text-center text-xs text-[#999999] bg-[#FAF7F2] rounded-xl border border-dashed border-[#E0DBD4] px-4">
-                    <span className="text-2xl block mb-1">👥</span>
+                    <PeopleIcon className="w-6 h-6 mx-auto mb-1.5 text-[#999999]" />
                     No teammates added yet.<br />
                     Add teammates below, paste a batch of emails, or simply launch and share the invite link!
                   </div>
@@ -386,7 +387,7 @@ export default function HostSetup() {
             </section>
 
             {/* Desktop Sticky Launch Card */}
-            <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4] space-y-3">
+            <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between text-xs text-[#555555]">
                 <span>Configured rounds:</span>
                 <strong className="text-[#1A1A1A]">{roundCount} rounds</strong>
