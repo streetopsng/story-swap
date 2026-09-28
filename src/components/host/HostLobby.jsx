@@ -173,7 +173,7 @@ export default function HostLobby() {
           <div className="md:col-span-5 space-y-4">
             
             {/* Progress Card */}
-            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4] text-center">
+            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm text-center">
               <div className="text-[36px] md:text-[48px] font-black text-[#F5821F] leading-none">
                 {joinedCount}
                 {totalCount > 0 && <span className="text-[#999999] text-2xl md:text-3xl font-bold">/{totalCount}</span>}
@@ -214,7 +214,7 @@ export default function HostLobby() {
             </section>
 
             {/* Desktop Start Card */}
-            <section className="hidden md:block bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4] space-y-3">
+            <section className="hidden md:block bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm space-y-3">
               <Button
                 variant="orange"
                 onClick={handleStartGame}
@@ -245,7 +245,7 @@ export default function HostLobby() {
 
           {/* Right Column (Live Roster Grid) */}
           <div className="md:col-span-7 flex flex-col">
-            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-[0_2px_0_#E0DBD4] flex-1 flex flex-col">
+            <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[20px] p-5 shadow-sm flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-3 shrink-0 flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555]">

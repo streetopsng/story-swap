@@ -18,7 +18,7 @@ export default function HostFinish() {
   return (
     <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-hidden items-center justify-center p-6">
       <div className="w-full max-w-[430px] md:max-w-xl">
-        <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[32px] p-8 md:p-12 text-center shadow-[0_4px_0_#E0DBD4]">
+        <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[32px] p-8 md:p-12 text-center shadow-sm">
           <div className="text-6xl md:text-7xl mb-4">🏁</div>
           <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F] mb-2">
             Session complete

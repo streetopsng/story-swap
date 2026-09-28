@@ -68,7 +68,7 @@ export default function GameRulesModal({ onConfirm, name }) {
         <Button
           variant="orange"
           onClick={onConfirm}
-          className="w-full py-3.5 text-sm font-extrabold rounded-xl shadow-[0_3px_0_#C06412] active:translate-y-0.5 cursor-pointer"
+          className="w-full py-3.5 text-sm font-extrabold rounded-xl shadow-sm active:translate-y-0.5 cursor-pointer"
         >
           Got it, enter lobby →
         </Button>

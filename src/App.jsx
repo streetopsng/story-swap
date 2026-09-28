@@ -11,11 +11,14 @@ import { getSession, createSession, subscribeSession } from './firebase/sessionS
 
 import LoadingScreen from './components/common/LoadingScreen';
 import SessionExpiredModal from './components/modals/SessionExpiredModal';
+import { LockIcon, CheckCircleIcon } from './components/common/Icons';
 
 const GummyGumLockedScreen = () => (
   <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
-    <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-[0_4px_0_#E0DBD4]">
-      <div className="text-5xl">🔒</div>
+    <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-sm">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-[#FDE8D0] border border-[#F5821F]/30 text-[#F5821F] flex items-center justify-center">
+        <LockIcon className="w-6 h-6" />
+      </div>
       <h1 className="text-2xl font-black text-[#1A1A1A]">Launch from GummyGum</h1>
       <p className="text-[#555] text-sm leading-relaxed">
         This experience is exclusively available through the GummyGum Hub. Open it from your GummyGum dashboard to start or join a session.
@@ -29,8 +32,10 @@ const GummyGumLockedScreen = () => (
 
 const GummyGumCancelledScreen = ({ isHost = false }) => (
   <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
-    <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-[0_4px_0_#E0DBD4]">
-      <div className="text-5xl">👋</div>
+    <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-sm">
+      <div className="w-14 h-14 mx-auto rounded-2xl bg-[#FDE8D0] border border-[#F5821F]/30 text-[#F5821F] flex items-center justify-center">
+        <CheckCircleIcon className="w-6 h-6" />
+      </div>
       <h1 className="text-2xl font-black text-[#1A1A1A]">Session Ended</h1>
       <p className="text-[#555] text-sm leading-relaxed">
         {isHost
