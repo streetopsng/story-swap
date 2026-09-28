@@ -96,8 +96,13 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
             setGgExpired(true);
             return;
           }
-          // Idle lobby sessions expire after 20 minutes of inactivity
-          if (sessData.status === 'lobby' && sessData.createdAt && Date.now() - sessData.createdAt >= 20 * 60 * 1000) {
+          // Idle lobby sessions expire after 20 minutes of inactivity.
+          // Firestore returns createdAt as a Timestamp instance (no numeric
+          // coercion), so it must be converted to millis before comparing.
+          const createdAtMs = sessData.createdAt?.toMillis
+            ? sessData.createdAt.toMillis()
+            : sessData.createdAt;
+          if (sessData.status === 'lobby' && createdAtMs && Date.now() - createdAtMs >= 20 * 60 * 1000) {
             setGgExpired(true);
             return;
           }
