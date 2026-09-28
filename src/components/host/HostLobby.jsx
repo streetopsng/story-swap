@@ -74,17 +74,6 @@ export default function HostLobby() {
   const totalCount = targetInvited;
   const progressPercent = Math.min(100, Math.round((joinedCount / totalCount) * 100));
 
-  const handleCopyInviteLink = () => {
-    const hubUrl = ggSession?.hubUrl || 'https://gummygum.app';
-    const inviteUrl = `${hubUrl}/join?pin=${sessionId}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(inviteUrl);
-      showToast('1-click invite link copied to clipboard!');
-    } else {
-      showToast(`Link: ${inviteUrl}`);
-    }
-  };
-
   const pendingParticipants = participants.filter(
     (p) => p.status !== 'joined' && (p.email || p.id?.includes('@'))
   );
@@ -160,7 +149,7 @@ export default function HostLobby() {
 
   return (
     <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-x-hidden">
-      <Navbar contextText={session?.name || 'Story Swap'} maxWidthClass="max-w-[430px] md:max-w-5xl" />
+      <Navbar contextText={session?.name || 'Story Swap'} sessionId={sessionId} maxWidthClass="max-w-[430px] md:max-w-5xl" />
 
       <Toast message={toastMsg} />
 
@@ -190,27 +179,6 @@ export default function HostLobby() {
                   />
                 </div>
               )}
-
-              {/* Share Invite Link Box */}
-              <div className="mt-4 pt-4 border-t border-[#E0DBD4] bg-[#FAF7F2] rounded-xl p-3 text-left space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-black uppercase text-[#999999] tracking-wider mb-0.5">
-                      1-Click Invite Link
-                    </div>
-                    <span className="text-xs font-mono font-bold text-[#1A1A1A] truncate block">
-                      {(ggSession?.hubUrl || 'https://gummygum.app')}/join?pin={sessionId}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyInviteLink}
-                    className="px-2.5 py-1.5 bg-white border border-[#E0DBD4] rounded-lg text-xs font-bold text-[#F5821F] hover:text-[#E8710A] shrink-0 cursor-pointer shadow-xs hover:bg-[#FDE8D0]/30 transition-all"
-                  >
-                    Copy Link
-                  </button>
-                </div>
-              </div>
             </section>
 
             {/* Desktop Start Card */}
@@ -236,7 +204,7 @@ export default function HostLobby() {
               </button>
               <p className="text-[12px] text-[#999999] text-center leading-relaxed">
                 {joinedCount === 0
-                  ? 'Waiting for players to join — copy the link above and send it to your team.'
+                  ? 'Waiting for players to join via their GummyGum invite.'
                   : `${joinedCount} teammate${joinedCount === 1 ? '' : 's'} ready! Launch when everyone is assembled.`}
               </p>
             </section>
@@ -278,7 +246,7 @@ export default function HostLobby() {
                     <span className="text-3xl block">⏳</span>
                     <p className="text-sm font-semibold text-[#1A1A1A]">No players have entered yet</p>
                     <p className="text-xs max-w-xs mx-auto">
-                      Share the invite link above with your teammates so they can join.
+                      Teammates join via their GummyGum invite.
                     </p>
                   </div>
                 ) : (
@@ -371,7 +339,7 @@ export default function HostLobby() {
           </button>
           <p className="text-[12px] text-[#999999] text-center leading-relaxed">
             {joinedCount === 0
-              ? 'Waiting for players to join — copy the invite link above.'
+              ? 'Waiting for players to join via their GummyGum invite.'
               : `${joinedCount} joined · Ready to start whenever you want.`}
           </p>
         </footer>
