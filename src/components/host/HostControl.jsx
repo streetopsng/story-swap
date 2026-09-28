@@ -100,7 +100,7 @@ export default function HostControl() {
 
   return (
     <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-x-hidden">
-      <Navbar contextText={session?.name || 'Team Bonding'} maxWidthClass="max-w-[430px] md:max-w-5xl" />
+      <Navbar contextText={session?.name || 'Team Bonding'} sessionId={sessionId} maxWidthClass="max-w-[430px] md:max-w-5xl" />
 
       <Toast message={toastMsg} />
 

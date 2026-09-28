@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { returnToGummyGum, getGummyGumSession } from '../../lib/gummygumSession';
+import { endSession } from '../../firebase/sessionService';
 
-export default function Navbar({ contextText = 'Story Swap', showBack = false, onBack, maxWidthClass = 'max-w-[430px] md:max-w-5xl' }) {
+export default function Navbar({ contextText = 'Story Swap', showBack = false, onBack, sessionId = null, maxWidthClass = 'max-w-[430px] md:max-w-5xl' }) {
   const navigate = useNavigate();
   const isHost = Boolean(getGummyGumSession()?.isHost);
 
@@ -11,6 +12,17 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
       onBack();
     } else {
       navigate(-1);
+    }
+  };
+
+  // sessionId means a live session exists — leaving here must end it,
+  // otherwise participants are left stuck with no host and no signal.
+  const handleExitToGummyGum = () => {
+    if (sessionId) {
+      if (!confirm('End this session and return to GummyGum?')) return;
+      endSession(sessionId).finally(() => returnToGummyGum());
+    } else {
+      returnToGummyGum();
     }
   };
 
@@ -37,7 +49,7 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
         {isHost && (
           <button
             type="button"
-            onClick={() => returnToGummyGum()}
+            onClick={handleExitToGummyGum}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
             title="Back to GummyGum"
           >

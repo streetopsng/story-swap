@@ -160,7 +160,7 @@ export default function HostLobby() {
 
   return (
     <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-x-hidden">
-      <Navbar contextText={session?.name || 'Story Swap'} maxWidthClass="max-w-[430px] md:max-w-5xl" />
+      <Navbar contextText={session?.name || 'Story Swap'} sessionId={sessionId} maxWidthClass="max-w-[430px] md:max-w-5xl" />
 
       <Toast message={toastMsg} />
 
