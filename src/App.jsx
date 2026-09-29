@@ -6,13 +6,15 @@ import HostLobby from './components/host/HostLobby';
 import HostControl from './components/host/HostControl';
 import HostFinish from './components/host/HostFinish';
 import PlayerJoinFlow from './components/player/PlayerJoinFlow';
-import { resolveGummyGumLaunch, returnToGummyGum } from './lib/gummygumSession';
+import { resolveGummyGumLaunch, returnToGummyGum, hostExitInProgressRef } from './lib/gummygumSession';
 import {
   getSession,
   createSession,
   subscribeSession,
   touchSessionActivity,
   markSessionAbandoned,
+  reopenLobby,
+  CLOSED_STATUSES,
 } from './firebase/sessionService';
 
 import LoadingScreen from './components/common/LoadingScreen';
@@ -36,17 +38,19 @@ const GummyGumLockedScreen = () => (
   </div>
 );
 
-const GummyGumCancelledScreen = ({ isHost = false }) => (
+const GummyGumCancelledScreen = ({ isHost = false, completed = false }) => (
   <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
     <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-sm">
       <div className="w-14 h-14 mx-auto rounded-2xl bg-[#FDE8D0] border border-[#F5821F]/30 text-[#F5821F] flex items-center justify-center">
         <CheckCircleIcon className="w-6 h-6" />
       </div>
-      <h1 className="text-2xl font-black text-[#1A1A1A]">Session Ended</h1>
+      <h1 className="text-2xl font-black text-[#1A1A1A]">{completed ? 'Session Complete' : 'Session Ended'}</h1>
       <p className="text-[#555] text-sm leading-relaxed">
         {isHost
           ? 'This session was ended. You can return to GummyGum to launch another experience.'
-          : 'This session was ended by the host. You can safely close this tab now.'}
+          : completed
+          ? 'Thanks for playing! The session is complete. You can close this tab now.'
+          : 'The host ended this session. You can close this tab now.'}
       </p>
       {isHost ? (
         <button
@@ -74,7 +78,45 @@ const GummyGumCancelledScreen = ({ isHost = false }) => (
 const ABANDON_THRESHOLD_MS = 3 * 60 * 60 * 1000;
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 
-const toMillis = (value) => (value?.toMillis ? value.toMillis() : value);
+const LOBBY_IDLE_MS = 20 * 60 * 1000;
+
+// Firestore Timestamp, millis, Date or ISO string -> millis; null when missing or
+// still pending (serverTimestamp() reads back as null until the server acks it).
+const toMillis = (value) => {
+  if (value == null) return null;
+  let ms;
+  if (typeof value.toMillis === 'function') ms = value.toMillis();
+  else if (typeof value === 'number') ms = value;
+  else if (value instanceof Date) ms = value.getTime();
+  else if (typeof value === 'string') ms = Date.parse(value);
+  else if (typeof value.seconds === 'number') ms = value.seconds * 1000;
+  return Number.isFinite(ms) && ms > 0 ? ms : null;
+};
+
+const latestMillis = (...values) => {
+  const valid = values.map(toMillis).filter((ms) => ms !== null);
+  return valid.length ? Math.max(...valid) : null;
+};
+
+const isIdleLobby = (sess, now = Date.now()) => {
+  if (sess?.status !== 'lobby') return false;
+  const openedMs = latestMillis(sess.createdAt, sess.lobbyOpenedAt);
+  return openedMs !== null && now - openedMs >= LOBBY_IDLE_MS;
+};
+
+const isAbandonedGame = (sess, now = Date.now()) => {
+  if (sess?.status !== 'in-progress') return false;
+  const last = latestMillis(sess.lastActivity, sess.updatedAt, sess.roundStartedAt, sess.createdAt);
+  return last !== null && now - last >= ABANDON_THRESHOLD_MS;
+};
+
+// The hub reuses a PIN for "run again" rounds, so a doc under this PIN may belong
+// to an earlier room; that one must be replaced, never shown as expired/ended.
+const isFromEarlierRoom = (sess, hostedSessionId) => {
+  if (!sess || !hostedSessionId) return false;
+  if (sess.hostedSessionId) return sess.hostedSessionId !== hostedSessionId;
+  return sess.status === 'completed' || CLOSED_STATUSES.includes(sess.status) || isIdleLobby(sess);
+};
 
 function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
   const navigate = useNavigate();
@@ -83,6 +125,7 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
 
   useEffect(() => {
     if (routedRef.current) return;
+    const isFreshLaunch = new URLSearchParams(window.location.search).has('ggt');
     resolveGummyGumLaunch().then(async (session) => {
       setGgSessionState(session);
       if (routedRef.current) return;
@@ -107,17 +150,32 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
           console.error('Session lookup failed:', err);
         }
 
+        if (isHost) {
+          try {
+            // Only replace a room that isn't this launch's; an ended/expired room of this
+            // same launch must stay ended so a duplicate tab can't resurrect it.
+            if (!existing || isFromEarlierRoom(existing, session?.hostedSessionId)) {
+              const hostName = session?.player?.name || params.get('name') || 'Team';
+              await createSession({
+                sessionId: code,
+                name: `${hostName}'s Story Swap`,
+                roundCount: 3,
+                invitedCount,
+                hostedSessionId: session?.hostedSessionId || null,
+              });
+              existing = null;
+            } else if (isFreshLaunch && existing.status === 'lobby') {
+              await reopenLobby(code);
+            }
+          } catch (err) {
+            console.error('Auto session ensure failed:', err);
+          }
+        }
+
         // Checked before this client's heartbeat starts so a returning
         // client can't mask a genuinely abandoned session.
-        if (existing?.status === 'in-progress') {
-          const lastActivity =
-            toMillis(existing.lastActivity) ||
-            toMillis(existing.updatedAt) ||
-            existing.roundStartedAt ||
-            toMillis(existing.createdAt);
-          if (lastActivity && Date.now() - lastActivity >= ABANDON_THRESHOLD_MS) {
-            await markSessionAbandoned(code);
-          }
+        if (isAbandonedGame(existing)) {
+          await markSessionAbandoned(code);
         }
 
         let latestStatus = null;
@@ -125,46 +183,28 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
           if (latestStatus === 'in-progress') touchSessionActivity(code);
         }, HEARTBEAT_INTERVAL_MS);
 
-        // Listen to session for cancellation and lobby expiration
+        let seenDoc = false;
         subscribeSession(code, (sessData) => {
+          if (hostExitInProgressRef.current) return;
           latestStatus = sessData?.status || null;
-          if (!sessData || sessData.status === 'cancelled' || sessData.status === 'ended') {
-            setGgCancelled(true);
+          // A missing doc only means "ended" once it has existed; before that it's still being created.
+          if (!sessData) {
+            if (seenDoc) setGgCancelled('ended');
+            return;
+          }
+          seenDoc = true;
+          if (sessData.status === 'cancelled' || sessData.status === 'ended') {
+            setGgCancelled(sessData.completed ? 'completed' : 'ended');
             return;
           }
           if (sessData.status === 'expired') {
             setGgExpired(sessData.abandoned ? 'game' : 'lobby');
             return;
           }
-          // Idle lobby sessions expire after 20 minutes of inactivity.
-          // Firestore returns createdAt as a Timestamp instance (no numeric
-          // coercion), so it must be converted to millis before comparing.
-          const createdAtMs = sessData.createdAt?.toMillis
-            ? sessData.createdAt.toMillis()
-            : sessData.createdAt;
-          if (sessData.status === 'lobby' && createdAtMs && Date.now() - createdAtMs >= 20 * 60 * 1000) {
-            setGgExpired('lobby');
-            return;
-          }
+          setGgExpired(isIdleLobby(sessData) ? 'lobby' : false);
         });
 
         if (isHost) {
-          try {
-            // Never recreate an existing session here, even if ended/expired —
-            // that would silently resurrect a cancelled room instead of letting
-            // the subscribeSession listener above route away from it.
-            if (!existing) {
-              const hostName = session?.player?.name || params.get('name') || 'Team';
-              await createSession({
-                sessionId: code,
-                name: `${hostName}'s Story Swap`,
-                roundCount: 3,
-                invitedCount,
-              });
-            }
-          } catch (err) {
-            console.error('Auto session ensure failed:', err);
-          }
           navigate(`/host/${code}/lobby`, { replace: true });
         } else {
           const search = window.location.search;
@@ -180,6 +220,7 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
 export default function App() {
   const [ggChecked, setGgChecked] = useState(false);
   const [ggSession, setGgSession] = useState(null);
+  // false, or 'ended' | 'completed'
   const [isCancelled, setIsCancelled] = useState(false);
   // false, or the phase that expired: 'lobby' | 'game'
   const [isSessionExpired, setIsSessionExpired] = useState(false);
@@ -196,7 +237,7 @@ export default function App() {
         {!ggChecked ? (
           <LoadingScreen message="Connecting to GummyGum..." />
         ) : isCancelled ? (
-          <GummyGumCancelledScreen isHost={Boolean(ggSession?.isHost)} />
+          <GummyGumCancelledScreen isHost={Boolean(ggSession?.isHost)} completed={isCancelled === 'completed'} />
         ) : !ggSession ? (
           <GummyGumLockedScreen />
         ) : (

@@ -7,18 +7,14 @@ import {
   subscribeSession,
   subscribeParticipants,
   startSession,
-  endSession,
 } from '../../firebase/sessionService';
 import {
   sendSessionInvitation,
   sendBulkSessionInvitations,
   isBrevoConfigured,
 } from '../../services/emailService';
-import {
-  getGummyGumSession,
-  closeGummyGumSession,
-  returnToGummyGum,
-} from '../../lib/gummygumSession';
+import { getGummyGumSession } from '../../lib/gummygumSession';
+import EndSessionButton from '../common/EndSessionButton';
 
 export default function HostLobby() {
   const { sessionId } = useParams();
@@ -191,17 +187,7 @@ export default function HostLobby() {
               >
                 {isStarting ? 'Starting...' : 'Start game ›'}
               </Button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('End this session and return to GummyGum?')) {
-                    endSession(sessionId).finally(() => closeGummyGumSession());
-                  }
-                }}
-                className="w-full py-2.5 rounded-full border border-[#E0DBD4] hover:border-red-300 text-xs font-bold text-[#777] hover:text-red-600 bg-white hover:bg-red-50/50 transition-all cursor-pointer shadow-xs"
-              >
-                Close Session & Return to GummyGum
-              </button>
+              <EndSessionButton sessionId={sessionId} variant="block" />
               <p className="text-[12px] text-[#999999] text-center leading-relaxed">
                 {joinedCount === 0
                   ? 'Waiting for players to join via their GummyGum invite.'
@@ -326,17 +312,7 @@ export default function HostLobby() {
           >
             {isStarting ? 'Starting...' : 'Start game ›'}
           </Button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('End this session and return to GummyGum?')) {
-                endSession(sessionId).finally(() => closeGummyGumSession());
-              }
-            }}
-            className="w-full py-2.5 rounded-full border border-[#E0DBD4] text-xs font-bold text-[#777] bg-white cursor-pointer shadow-xs"
-          >
-            Close Session & Return to GummyGum
-          </button>
+          <EndSessionButton sessionId={sessionId} variant="block" />
           <p className="text-[12px] text-[#999999] text-center leading-relaxed">
             {joinedCount === 0
               ? 'Waiting for players to join via their GummyGum invite.'
