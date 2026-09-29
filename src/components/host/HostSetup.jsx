@@ -8,7 +8,7 @@ import Toast from '../common/Toast';
 import { CATEGORIES } from '../../utils/questionBank';
 import { createSession } from '../../firebase/sessionService';
 import { sendBulkSessionInvitations, isBrevoConfigured } from '../../services/emailService';
-import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon } from '../common/Icons';
+import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon, ChevronRightIcon } from '../common/Icons';
 
 export default function HostSetup() {
   const navigate = useNavigate();
@@ -323,7 +323,7 @@ export default function HostSetup() {
                             : 'border-[#E0DBD4] bg-white'
                         }`}
                       >
-                        {teammate.selected && '✓'}
+                        {teammate.selected && <CheckIcon className="w-3 h-3" />}
                       </div>
                       <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] flex items-center justify-center text-sm shrink-0">
                         {teammate.av}
@@ -342,7 +342,7 @@ export default function HostSetup() {
                         className="text-xs text-[#999999] hover:text-[#E8334A] px-1.5 py-1 rounded cursor-pointer"
                         title="Remove"
                       >
-                        ✕
+                        <CloseIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))
@@ -380,7 +380,7 @@ export default function HostSetup() {
                     onClick={() => setIsBulkModalOpen(true)}
                     className="text-xs font-bold text-[#F5821F] hover:text-[#E8710A] underline cursor-pointer flex items-center gap-1"
                   >
-                    📋 Bulk paste emails
+                    <ClipboardIcon className="w-3.5 h-3.5" /> Bulk paste emails
                   </button>
                 </div>
               </form>
@@ -406,7 +406,7 @@ export default function HostSetup() {
                     className="accent-[#F5821F] w-4 h-4 mt-0.5 rounded cursor-pointer shrink-0"
                   />
                   <span>
-                    ✉️ Automatically email game link to invited teammates via Brevo
+                    Automatically email game link to invited teammates via Brevo
                   </span>
                 </label>
               )}
@@ -417,7 +417,7 @@ export default function HostSetup() {
                 disabled={isSubmitting}
                 className="py-4 text-base mt-2"
               >
-                {isSubmitting ? 'Launching...' : 'Launch session — notify team ›'}
+                {isSubmitting ? 'Launching...' : <>Launch session and notify team <ChevronRightIcon className="w-4 h-4" /></>}
               </Button>
               <p className="text-[11px] text-[#999999] text-center leading-relaxed">
                 You will land in the host lobby with a live invite link to share with your team.

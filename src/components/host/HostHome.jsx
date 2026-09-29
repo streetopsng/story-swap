@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../common/Button';
 import Input from '../common/Input';
-import { DiceIcon, BulbIcon, BoltIcon } from '../common/Icons';
+import { DiceIcon, BulbIcon, BoltIcon, ChevronRightIcon } from '../common/Icons';
 
 export default function HostHome() {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ export default function HostHome() {
                 onClick={() => navigate('/host/setup')}
                 className="text-base py-4"
               >
-                Create a game ›
+                Create a game <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </div>
 
@@ -105,7 +105,7 @@ export default function HostHome() {
                   disabled={!joinCode.trim()}
                   className="w-auto px-6 whitespace-nowrap"
                 >
-                  Join ›
+                  Join <ChevronRightIcon className="w-4 h-4" />
                 </Button>
               </form>
             </div>

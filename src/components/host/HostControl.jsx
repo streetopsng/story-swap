@@ -8,6 +8,7 @@ import {
   subscribeParticipants,
   advanceRound,
 } from '../../firebase/sessionService';
+import { ClockIcon, ChevronRightIcon } from '../common/Icons';
 
 export default function HostControl() {
   const { sessionId } = useParams();
@@ -95,7 +96,7 @@ export default function HostControl() {
   const formatElapsed = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    return `⏱ ${mins}:${String(secs).padStart(2, '0')} elapsed`;
+    return `${mins}:${String(secs).padStart(2, '0')} elapsed`;
   };
 
   return (
@@ -112,7 +113,8 @@ export default function HostControl() {
           <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#999999]">
             Round {currentRoundIndex + 1} of {totalRounds}
           </div>
-          <div className="text-[12px] md:text-[14px] font-extrabold text-[#E8710A] bg-[#FDE8D0] px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1.5 text-[12px] md:text-[14px] font-extrabold text-[#E8710A] bg-[#FDE8D0] px-3 py-1 rounded-full">
+            <ClockIcon className="w-3.5 h-3.5" />
             {formatElapsed(elapsedSec)}
           </div>
         </div>
@@ -189,9 +191,7 @@ export default function HostControl() {
           >
             {isAdvancing
               ? 'Updating round...'
-              : isLastRound
-              ? 'Finish session ›'
-              : 'Next round ›'}
+              : <>{isLastRound ? 'Finish session' : 'Next round'} <ChevronRightIcon className="w-4 h-4" /></>}
           </Button>
         </footer>
 
