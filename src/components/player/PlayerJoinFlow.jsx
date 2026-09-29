@@ -13,6 +13,9 @@ import {
   setGroupTurn,
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
+import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
+import { isAvatarId, randomAvatarId } from '../../lib/avatars';
 
 const TURN_SECONDS = 60;
 
@@ -29,12 +32,16 @@ export default function PlayerJoinFlow() {
   const savedIdentity = useMemo(() => {
     try {
       const data = localStorage.getItem(`story_swap_player_${sessionId}`);
-      if (data) return JSON.parse(data);
+      // Identities saved with a legacy emoji avatar re-pick from the hub set.
+      if (data) {
+        const parsed = JSON.parse(data);
+        return isAvatarId(parsed?.avatar) ? parsed : null;
+      }
       if (queryEmail) {
         const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
         const savedN = localStorage.getItem(`story_swap_name_${queryEmail}`) || queryName;
         const joined = localStorage.getItem(`story_swap_joined_${sessionId}_${queryEmail}`) === 'true';
-        if (joined && savedAv) {
+        if (joined && isAvatarId(savedAv)) {
           return { email: queryEmail, name: savedN, avatar: savedAv };
         }
       }
@@ -58,9 +65,9 @@ export default function PlayerJoinFlow() {
     if (savedIdentity?.avatar) return savedIdentity.avatar;
     if (queryEmail) {
       const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
-      if (savedAv) return savedAv;
+      if (isAvatarId(savedAv)) return savedAv;
     }
-    return '🙂';
+    return randomAvatarId();
   });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
@@ -211,7 +218,7 @@ export default function PlayerJoinFlow() {
           <div className="flex-1 flex flex-col justify-between p-6 md:p-12">
             <div className="flex-1 flex items-center justify-center">
               <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-6 md:p-0 text-center shadow-sm md:shadow-none">
-                <div className="text-5xl md:text-6xl mb-3 md:mb-4">🗣️</div>
+                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 rounded-2xl bg-[#FDE8D0] text-[#F5821F] flex items-center justify-center"><ChatIcon className="w-9 h-9 md:w-11 md:h-11" /></div>
                 <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F]">
                   You're invited
                 </div>
@@ -228,7 +235,7 @@ export default function PlayerJoinFlow() {
 
             <footer className="space-y-2 pt-6 max-w-sm mx-auto w-full">
               <Button variant="orange" onClick={() => setStep('email')} className="py-4 text-base">
-                Join the game ›
+                Join the game <ChevronRightIcon className="w-4 h-4" />
               </Button>
               <p className="text-[12px] text-[#999999] text-center">
                 Takes about 20 seconds to set up
@@ -267,7 +274,7 @@ export default function PlayerJoinFlow() {
                 onClick={() => setStep('identity')}
                 className="py-4 text-base"
               >
-                Continue ›
+                Continue <ChevronRightIcon className="w-4 h-4" />
               </Button>
             </footer>
           </div>
@@ -289,9 +296,9 @@ export default function PlayerJoinFlow() {
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
-                  className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[#EDEAE4] border-3 border-[#1A1A1A] flex items-center justify-center text-5xl md:text-6xl cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[#EDEAE4] border-3 border-[#1A1A1A] overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                 >
-                  {avatar}
+                  <Avatar id={avatar} className="w-full h-full" />
                 </button>
                 <div className="text-[18px] md:text-[20px] font-extrabold text-[#1A1A1A] mt-3">
                   {name || '—'}
@@ -301,7 +308,7 @@ export default function PlayerJoinFlow() {
                   onClick={() => setIsAvatarModalOpen(true)}
                   className="mt-3 flex items-center gap-2 bg-[#EDEAE4] hover:bg-[#E0DBD4] rounded-full py-2 px-5 text-[13px] font-bold text-[#1A1A1A] cursor-pointer"
                 >
-                  🎨 Choose avatar
+                  <PaletteIcon className="w-4 h-4" /> Choose avatar
                 </button>
               </div>
 
@@ -330,7 +337,7 @@ export default function PlayerJoinFlow() {
                 onClick={() => setShowRulesModal(true)}
                 className="py-4 text-base"
               >
-                Enter the lobby →
+                Enter the lobby <ArrowRightIcon className="w-4 h-4" />
               </Button>
               <p className="text-[11px] text-[#999999] text-center">
                 Enter your name to continue
@@ -359,13 +366,13 @@ export default function PlayerJoinFlow() {
         {/* ── STEP 4: SAVING ANIMATION ── */}
         {step === 'saving' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#F5821F] flex items-center justify-center text-5xl md:text-6xl animate-pulse-soft">
-              {avatar}
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#F5821F] p-1.5 animate-pulse-soft">
+              <Avatar id={avatar} className="w-full h-full" />
             </div>
             <div className="text-[18px] md:text-[22px] font-extrabold text-[#1A1A1A]">
               Saving your identity...
             </div>
-            <div className="text-3xl animate-spin">🪐</div>
+            <SpinnerIcon className="w-8 h-8 mx-auto text-[#F5821F] animate-spin" />
           </div>
         )}
 
@@ -396,8 +403,8 @@ export default function PlayerJoinFlow() {
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3.5 my-2 max-w-md mx-auto w-full">
               {/* You Card */}
               <div className="flex items-center gap-3 bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-4 shadow-sm md:shadow-none">
-                <div className="w-12 h-12 rounded-full bg-[#FDE8D0] border-2 border-[#F5821F] flex items-center justify-center text-2xl shrink-0">
-                  {avatar}
+                <div className="w-12 h-12 rounded-full bg-[#FDE8D0] border-2 border-[#F5821F] overflow-hidden shrink-0">
+                  <Avatar id={avatar} className="w-full h-full" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[16px] font-extrabold text-[#1A1A1A] truncate">
@@ -406,7 +413,7 @@ export default function PlayerJoinFlow() {
                   <div className="text-[12px] text-[#999999]">Ready to play</div>
                 </div>
                 <div className="bg-[#FDE8D0] border-[1.5px] border-[#F5821F] rounded-full py-1 px-3 text-[11px] font-extrabold text-[#E8710A]">
-                  ✓ Ready
+                  <span className="inline-flex items-center gap-1"><CheckIcon className="w-3 h-3" /> Ready</span>
                 </div>
               </div>
 
@@ -423,15 +430,15 @@ export default function PlayerJoinFlow() {
                       key={p.id || p.email}
                       className="flex items-center gap-2.5 py-2.5 px-3 bg-white md:bg-[#FAF7F2] rounded-xl border border-[#E0DBD4]"
                     >
-                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] flex items-center justify-center text-sm shrink-0">
-                        {p.av || '🙂'}
+                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                        <Avatar id={p.av} className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-bold text-[#1A1A1A] truncate">
                           {p.name || p.email}
                         </div>
                       </div>
-                      <div className="text-sm">🟢</div>
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#22A855] shrink-0" />
                     </div>
                   ))}
               </div>
@@ -485,8 +492,8 @@ export default function PlayerJoinFlow() {
                         key={m.id || m.email || m.name}
                         className="flex items-center gap-1.5 bg-[#FDE8D0] border border-[#F5821F] rounded-full py-1.5 pl-1.5 pr-3.5 text-[12px] font-bold text-[#1A1A1A]"
                       >
-                        <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-xs shrink-0">
-                          {m.av || '🙂'}
+                        <div className="w-5 h-5 rounded-full bg-white overflow-hidden shrink-0">
+                          <Avatar id={m.av} className="w-full h-full" />
                         </div>
                         <span>{isThisMe ? `${m.name || 'You'} (You)` : m.name}</span>
                       </div>
@@ -498,7 +505,7 @@ export default function PlayerJoinFlow() {
               {/* Turn Card */}
               {turnIndex >= myGroup.length && myGroup.length > 0 ? (
                 <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
-                  <div className="text-4xl mb-2">✅</div>
+                  <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 text-[#22A855]" />
                   <div className="text-[18px] font-black text-[#1A1A1A]">Round complete!</div>
                   <div className="text-[13px] text-[#555555] mt-1">
                     Waiting for the host to start the next round...
@@ -506,7 +513,7 @@ export default function PlayerJoinFlow() {
                 </section>
               ) : isMyTurn ? (
                 <section className="bg-[#FDE8D0] border-2 border-[#F5821F] rounded-[24px] p-6 md:p-8 text-center shadow-sm">
-                  <div className="text-4xl md:text-5xl mb-2">🎤</div>
+                  <MicIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 text-[#F5821F]" />
                   <div className="text-[20px] md:text-[22px] font-black text-[#1A1A1A]">Your turn!</div>
                   <div className="text-[13px] md:text-[14px] text-[#555555] mt-1">
                     Share your answer with the group
@@ -519,12 +526,12 @@ export default function PlayerJoinFlow() {
                     onClick={handleFinishMyTurn}
                     className="mt-5 py-3.5"
                   >
-                    I'm done sharing ›
+                    I'm done sharing <ChevronRightIcon className="w-4 h-4" />
                   </Button>
                 </section>
               ) : (
                 <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-sm md:shadow-none">
-                  <div className="text-4xl md:text-5xl mb-2">👂</div>
+                  <EarIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 text-[#555]" />
                   <div className="text-[19px] md:text-[21px] font-black text-[#1A1A1A]">
                     It's {currentSpeaker?.name || 'teammate'}'s turn
                   </div>
@@ -539,7 +546,7 @@ export default function PlayerJoinFlow() {
                     onClick={handleFinishMyTurn}
                     className="text-xs text-[#999999] hover:text-[#555555] underline cursor-pointer mt-4"
                   >
-                    Next speaker ›
+                    <span className="inline-flex items-center gap-1">Next speaker <ChevronRightIcon className="w-3 h-3" /></span>
                   </button>
                 </section>
               )}
@@ -552,7 +559,7 @@ export default function PlayerJoinFlow() {
           <div className="flex-1 flex flex-col justify-between p-6 md:p-12">
             <div className="flex-1 flex items-center justify-center">
               <section className="w-full bg-white md:bg-transparent border-[1.5px] border-[#E0DBD4] md:border-none rounded-[24px] p-8 md:p-0 text-center shadow-sm md:shadow-none">
-                <div className="text-5xl md:text-6xl mb-3 md:mb-4">🎉</div>
+                <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 rounded-2xl bg-[#FDE8D0] text-[#F5821F] flex items-center justify-center"><SparkleIcon className="w-9 h-9 md:w-11 md:h-11" /></div>
                 <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F]">
                   Session complete
                 </div>

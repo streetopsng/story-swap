@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from '../common/Button';
+import { BulbIcon, ArrowRightIcon } from '../common/Icons';
 
 export default function GameRulesModal({ onConfirm, name }) {
   return (
@@ -58,7 +59,7 @@ export default function GameRulesModal({ onConfirm, name }) {
 
         {/* Tip Box */}
         <div className="p-3 bg-[#FFF9F2] border border-[#F5821F]/20 rounded-xl text-left flex items-center gap-2.5 mb-6">
-          <span className="text-base shrink-0">💡</span>
+          <BulbIcon className="w-4 h-4 shrink-0 text-[#F5821F]" />
           <span className="text-[11.5px] text-[#885215] font-medium leading-snug">
             <strong>Pro tip:</strong> Keep your stories specific and personal, but avoid obvious clues like your job title!
           </span>
@@ -70,7 +71,7 @@ export default function GameRulesModal({ onConfirm, name }) {
           onClick={onConfirm}
           className="w-full py-3.5 text-sm font-extrabold rounded-xl shadow-sm active:translate-y-0.5 cursor-pointer"
         >
-          Got it, enter lobby →
+          Got it, enter lobby <ArrowRightIcon className="w-4 h-4" />
         </Button>
       </div>
     </div>

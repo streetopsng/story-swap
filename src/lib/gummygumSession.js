@@ -1,5 +1,8 @@
-const API_URL = import.meta.env.VITE_GUMMYGUM_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_GUMMYGUM_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://paige-server.onrender.com');
 const STORAGE_KEY = 'gummygum_launch_session';
+
+// Set while the host is ending the session so realtime listeners don't reroute mid-flow.
+export const hostExitInProgressRef = { current: false };
 
 export function getGummyGumSession() {
   if (typeof window === 'undefined') return null;
@@ -61,6 +64,8 @@ export async function resolveGummyGumLaunch() {
     player: body.data.player,
     reportToken: body.data.reportToken,
     roomCode: body.data.roomCode || null,
+    // The hub reuses a PIN across "run again" rounds; this tells rooms apart.
+    hostedSessionId: params.get('sessionId') || null,
     isHost: Boolean(body.data.isHost),
     invitedCount: body.data.invitedCount || null,
     hubUrl,
@@ -84,6 +89,7 @@ export async function reportGummyGumCancel() {
   try {
     await fetch(`${API_URL}/api/gummygum/launch/cancel`, {
       method: 'POST',
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reportToken: session.reportToken }),
     });
@@ -102,6 +108,7 @@ export async function reportGummyGumResult(report) {
   try {
     await fetch(`${API_URL}/api/gummygum/launch/report`, {
       method: 'POST',
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reportToken: session.reportToken, report }),
     });
@@ -129,6 +136,7 @@ export async function closeGummyGumSession(finalReport) {
   try {
     await fetch(`${API_URL}/api/gummygum/launch/close`, {
       method: 'POST',
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reportToken: session.reportToken, report: finalReport }),
     });
@@ -140,6 +148,29 @@ export async function closeGummyGumSession(finalReport) {
     localStorage.removeItem(STORAGE_KEY);
     window.location.href = hub;
   }
+}
+
+// Host-only. A completed game is closed with its report; anything else is cancelled.
+export async function endGummyGumSession({ completed = false, report = null } = {}) {
+  const session = getGummyGumSession();
+  if (session?.isHost && session.reportToken) {
+    try {
+      const res = await fetch(`${API_URL}/api/gummygum/launch/${completed ? 'close' : 'cancel'}`, {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          completed
+            ? { reportToken: session.reportToken, report }
+            : { reportToken: session.reportToken }
+        ),
+      });
+      if (!res.ok) console.error('GummyGum end session failed', res.status);
+    } catch (err) {
+      console.error('GummyGum end session failed', err);
+    }
+  }
+  returnToGummyGum();
 }
 
 export function returnToGummyGum() {

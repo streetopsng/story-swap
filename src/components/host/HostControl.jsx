@@ -8,6 +8,8 @@ import {
   subscribeParticipants,
   advanceRound,
 } from '../../firebase/sessionService';
+import { ClockIcon, ChevronRightIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
 
 export default function HostControl() {
   const { sessionId } = useParams();
@@ -95,7 +97,7 @@ export default function HostControl() {
   const formatElapsed = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    return `⏱ ${mins}:${String(secs).padStart(2, '0')} elapsed`;
+    return `${mins}:${String(secs).padStart(2, '0')} elapsed`;
   };
 
   return (
@@ -112,7 +114,8 @@ export default function HostControl() {
           <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#999999]">
             Round {currentRoundIndex + 1} of {totalRounds}
           </div>
-          <div className="text-[12px] md:text-[14px] font-extrabold text-[#E8710A] bg-[#FDE8D0] px-3 py-1 rounded-full">
+          <div className="flex items-center gap-1.5 text-[12px] md:text-[14px] font-extrabold text-[#E8710A] bg-[#FDE8D0] px-3 py-1 rounded-full">
+            <ClockIcon className="w-3.5 h-3.5" />
             {formatElapsed(elapsedSec)}
           </div>
         </div>
@@ -161,8 +164,8 @@ export default function HostControl() {
                         key={member.id || member.email || member.name}
                         className="flex items-center gap-2 bg-[#FDE8D0] border border-[#F5821F] rounded-full py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold text-[#1A1A1A]"
                       >
-                        <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-sm shrink-0">
-                          {member.av || '🙂'}
+                        <div className="w-6 h-6 rounded-full bg-white overflow-hidden shrink-0">
+                          <Avatar id={member.av} className="w-full h-full" />
                         </div>
                         <span className="truncate max-w-[130px]">
                           {member.name || member.email}
@@ -189,9 +192,7 @@ export default function HostControl() {
           >
             {isAdvancing
               ? 'Updating round...'
-              : isLastRound
-              ? 'Finish session ›'
-              : 'Next round ›'}
+              : <>{isLastRound ? 'Finish session' : 'Next round'} <ChevronRightIcon className="w-4 h-4" /></>}
           </Button>
         </footer>
 

@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
   onSnapshot,
@@ -73,6 +74,25 @@ export async function getSession(sessionId) {
   return getLocalStore(`session_${sessionId}`, null);
 }
 
+export const CLOSED_STATUSES = ['ended', 'cancelled', 'expired'];
+
+async function isSessionClosed(sessionId) {
+  const current = await getSession(sessionId);
+  return Boolean(current && CLOSED_STATUSES.includes(current.status));
+}
+
+export async function getParticipants(sessionId) {
+  if (isFirebaseConfigured && db) {
+    try {
+      const snap = await getDocs(collection(db, 'sessions', sessionId, 'participants'));
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    } catch {
+      return [];
+    }
+  }
+  return getLocalStore(`participants_${sessionId}`, []);
+}
+
 /**
  * Create a new game session
  */
@@ -83,6 +103,7 @@ export async function createSession({
   invitedEmails = [],
   invitedCount = null,
   customQuestions = {},
+  hostedSessionId = null,
 } = {}) {
   const sessionId = customSessionId || generateSessionId();
   const prompts = buildSessionPrompts(roundCount, customQuestions);
@@ -94,6 +115,7 @@ export async function createSession({
     prompts,
     customQuestions,
     invitedCount: invitedCount ? Number(invitedCount) : (invitedEmails.length || null),
+    hostedSessionId,
     status: 'lobby', // 'lobby' | 'in-progress' | 'completed'
     currentRound: 0,
     groups: [],
@@ -107,7 +129,7 @@ export async function createSession({
     email: typeof item === 'string' ? item.toLowerCase() : item.email.toLowerCase(),
     name: typeof item === 'object' && item.name ? item.name : '',
     dept: typeof item === 'object' && item.dept ? item.dept : '',
-    av: typeof item === 'object' && item.av ? item.av : '🙂',
+    av: typeof item === 'object' && item.av ? item.av : null,
     status: 'invited',
     joinedAt: null,
   }));
@@ -248,6 +270,7 @@ export function subscribeParticipants(sessionId, callback) {
  * Join or update player identity in session
  */
 export async function joinSession(sessionId, { email, name, avatar, dept = '' }) {
+  if (await isSessionClosed(sessionId)) return null;
   const normalizedEmail = email.trim().toLowerCase();
   const participantId = normalizedEmail || `p_${Date.now()}`;
 
@@ -255,7 +278,7 @@ export async function joinSession(sessionId, { email, name, avatar, dept = '' })
     id: participantId,
     email: normalizedEmail,
     name: name.trim(),
-    av: avatar || '🙂',
+    av: avatar || null,
     dept,
     status: 'joined',
     joinedAt: Date.now(),
@@ -374,9 +397,11 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
 /**
  * End session and mark cancelled/ended
  */
-export async function endSession(sessionId) {
+export async function endSession(sessionId, { completed = false } = {}) {
   const updates = {
     status: 'ended',
+    completed,
+    endedAt: Date.now(),
     updatedAt: Date.now(),
   };
 
@@ -421,6 +446,11 @@ export function touchSessionActivity(sessionId) {
   return patchSession(sessionId, { lastActivity: Date.now() });
 }
 
+// A host relaunching its own lobby from the hub restarts the idle clock.
+export function reopenLobby(sessionId) {
+  return patchSession(sessionId, { lobbyOpenedAt: Date.now() });
+}
+
 export function markSessionAbandoned(sessionId) {
   return patchSession(sessionId, { status: 'expired', abandoned: true, updatedAt: Date.now() });
 }
@@ -430,6 +460,7 @@ export function markSessionAbandoned(sessionId) {
  * stays shared across the group's devices.
  */
 export async function setGroupTurn(sessionId, groupIndex, round, index) {
+  if (await isSessionClosed(sessionId)) return;
   const entry = { round, index, startedAt: Date.now() };
   if (isFirebaseConfigured && db) {
     try {

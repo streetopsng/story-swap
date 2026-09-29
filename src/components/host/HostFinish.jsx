@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import Button from '../common/Button';
-import { closeGummyGumSession } from '../../lib/gummygumSession';
+import Navbar from '../common/Navbar';
+import EndSessionButton from '../common/EndSessionButton';
+import { CheckCircleIcon } from '../common/Icons';
 
 export default function HostFinish() {
-  const navigate = useNavigate();
+  const { sessionId } = useParams();
 
   useEffect(() => {
     confetti({
@@ -16,10 +17,14 @@ export default function HostFinish() {
   }, []);
 
   return (
-    <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-hidden items-center justify-center p-6">
+    <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-hidden">
+      <Navbar contextText="Session complete" sessionId={sessionId} maxWidthClass="max-w-[430px] md:max-w-5xl" />
+      <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-[430px] md:max-w-xl">
         <section className="bg-white border-[1.5px] border-[#E0DBD4] rounded-[32px] p-8 md:p-12 text-center shadow-sm">
-          <div className="text-6xl md:text-7xl mb-4">🏁</div>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#FDE8D0] border border-[#F5821F]/30 text-[#F5821F] flex items-center justify-center">
+            <CheckCircleIcon className="w-8 h-8" />
+          </div>
           <div className="text-[11px] md:text-[13px] font-extrabold tracking-widest uppercase text-[#F5821F] mb-2">
             Session complete
           </div>
@@ -30,14 +35,11 @@ export default function HostFinish() {
             All Story Swap rounds have concluded. Great job facilitating genuine connections across your team!
           </p>
 
-          <Button
-            variant="orange"
-            onClick={() => closeGummyGumSession()}
-            className="py-4 text-base max-w-xs mx-auto"
-          >
-            Done — Return to GummyGum →
-          </Button>
+          <div className="max-w-xs mx-auto">
+            <EndSessionButton sessionId={sessionId} variant="block" />
+          </div>
         </section>
+      </div>
       </div>
     </main>
   );

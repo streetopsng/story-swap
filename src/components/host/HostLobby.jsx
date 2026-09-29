@@ -7,18 +7,16 @@ import {
   subscribeSession,
   subscribeParticipants,
   startSession,
-  endSession,
 } from '../../firebase/sessionService';
 import {
   sendSessionInvitation,
   sendBulkSessionInvitations,
   isBrevoConfigured,
 } from '../../services/emailService';
-import {
-  getGummyGumSession,
-  closeGummyGumSession,
-  returnToGummyGum,
-} from '../../lib/gummygumSession';
+import { getGummyGumSession } from '../../lib/gummygumSession';
+import EndSessionButton from '../common/EndSessionButton';
+import { ChevronRightIcon, MailIcon, HourglassIcon, CheckIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
 
 export default function HostLobby() {
   const { sessionId } = useParams();
@@ -189,19 +187,9 @@ export default function HostLobby() {
                 disabled={isStarting || joinedCount === 0}
                 className="py-4 text-base"
               >
-                {isStarting ? 'Starting...' : 'Start game ›'}
+                {isStarting ? 'Starting...' : <>Start game <ChevronRightIcon className="w-4 h-4" /></>}
               </Button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('End this session and return to GummyGum?')) {
-                    endSession(sessionId).finally(() => closeGummyGumSession());
-                  }
-                }}
-                className="w-full py-2.5 rounded-full border border-[#E0DBD4] hover:border-red-300 text-xs font-bold text-[#777] hover:text-red-600 bg-white hover:bg-red-50/50 transition-all cursor-pointer shadow-xs"
-              >
-                Close Session & Return to GummyGum
-              </button>
+              <EndSessionButton sessionId={sessionId} variant="block" />
               <p className="text-[12px] text-[#999999] text-center leading-relaxed">
                 {joinedCount === 0
                   ? 'Waiting for players to join via their GummyGum invite.'
@@ -233,7 +221,7 @@ export default function HostLobby() {
                     className="px-2.5 py-1 bg-[#FAF7F2] border border-[#F5821F]/40 hover:border-[#F5821F] text-[#F5821F] hover:text-[#E8710A] rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
                     title="Send email invitation to all pending teammates via Brevo"
                   >
-                    <span>✉️</span>
+                    <MailIcon className="w-3.5 h-3.5" />
                     <span>{isBulkSending ? 'Sending emails...' : `Email pending (${pendingCount})`}</span>
                   </button>
                 )}
@@ -243,7 +231,7 @@ export default function HostLobby() {
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-2.5 max-h-[420px] md:max-h-[500px]">
                 {participants.length === 0 ? (
                   <div className="py-12 text-center text-[#999999] space-y-2">
-                    <span className="text-3xl block">⏳</span>
+                    <HourglassIcon className="w-8 h-8 mx-auto text-[#999999]" />
                     <p className="text-sm font-semibold text-[#1A1A1A]">No players have entered yet</p>
                     <p className="text-xs max-w-xs mx-auto">
                       Teammates join via their GummyGum invite.
@@ -264,11 +252,11 @@ export default function HostLobby() {
                           }`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-full border-[1.5px] border-[#F5821F] flex items-center justify-center text-lg shrink-0 ${
+                            className={`w-10 h-10 rounded-full border-[1.5px] border-[#F5821F] overflow-hidden shrink-0 ${
                               isJoined ? 'bg-[#FDE8D0]' : 'bg-[#EDEAE4]'
                             }`}
                           >
-                            {p.av || '🙂'}
+                            <Avatar id={p.av} className="w-full h-full" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[14px] font-bold text-[#1A1A1A] truncate">
@@ -280,8 +268,8 @@ export default function HostLobby() {
                           </div>
                           <div className="shrink-0 flex items-center gap-1.5">
                             {isJoined ? (
-                              <span className="px-2 py-0.5 rounded-full bg-[#22A855]/10 text-[#22A855] text-[11px] font-extrabold">
-                                Ready ✓
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#22A855]/10 text-[#22A855] text-[11px] font-extrabold">
+                                Ready <CheckIcon className="w-2.5 h-2.5" />
                               </span>
                             ) : (
                               <div className="flex items-center gap-1.5">
@@ -293,14 +281,14 @@ export default function HostLobby() {
                                     type="button"
                                     onClick={() => handleSendSingleInvite(p)}
                                     disabled={sendingEmails[pEmailKey]}
-                                    className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#FAF7F2] border border-[#E0DBD4] text-[#F5821F] hover:border-[#F5821F] cursor-pointer disabled:opacity-50 transition-all shadow-xs"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#FAF7F2] border border-[#E0DBD4] text-[#F5821F] hover:border-[#F5821F] cursor-pointer disabled:opacity-50 transition-all shadow-xs"
                                     title={`Send invitation email to ${p.email || p.id}`}
                                   >
                                     {sendingEmails[pEmailKey]
                                       ? '...'
                                       : recentlySent[pEmailKey]
-                                      ? 'Sent ✓'
-                                      : 'Invite ✉️'}
+                                      ? <>Sent <CheckIcon className="w-2.5 h-2.5" /></>
+                                      : <>Invite <MailIcon className="w-3 h-3" /></>}
                                   </button>
                                 )}
                               </div>
@@ -324,19 +312,9 @@ export default function HostLobby() {
             onClick={handleStartGame}
             disabled={isStarting || joinedCount === 0}
           >
-            {isStarting ? 'Starting...' : 'Start game ›'}
+            {isStarting ? 'Starting...' : <>Start game <ChevronRightIcon className="w-4 h-4" /></>}
           </Button>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm('End this session and return to GummyGum?')) {
-                endSession(sessionId).finally(() => closeGummyGumSession());
-              }
-            }}
-            className="w-full py-2.5 rounded-full border border-[#E0DBD4] text-xs font-bold text-[#777] bg-white cursor-pointer shadow-xs"
-          >
-            Close Session & Return to GummyGum
-          </button>
+          <EndSessionButton sessionId={sessionId} variant="block" />
           <p className="text-[12px] text-[#999999] text-center leading-relaxed">
             {joinedCount === 0
               ? 'Waiting for players to join via their GummyGum invite.'

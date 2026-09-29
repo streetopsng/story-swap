@@ -1,7 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { returnToGummyGum, getGummyGumSession } from '../../lib/gummygumSession';
-import { endSession } from '../../firebase/sessionService';
+import EndSessionButton from './EndSessionButton';
+import { ChevronLeftIcon } from './Icons';
 
 export default function Navbar({ contextText = 'Story Swap', showBack = false, onBack, sessionId = null, maxWidthClass = 'max-w-[430px] md:max-w-5xl' }) {
   const navigate = useNavigate();
@@ -15,17 +16,6 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
     }
   };
 
-  // sessionId means a live session exists — leaving here must end it,
-  // otherwise participants are left stuck with no host and no signal.
-  const handleExitToGummyGum = () => {
-    if (sessionId) {
-      if (!confirm('End this session and return to GummyGum?')) return;
-      endSession(sessionId).finally(() => returnToGummyGum());
-    } else {
-      returnToGummyGum();
-    }
-  };
-
   return (
     <header className={`px-4 pt-4 pb-2 flex items-center justify-between shrink-0 ${maxWidthClass} w-full mx-auto`}>
       <div className="flex items-center gap-2">
@@ -35,7 +25,7 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
             className="w-8 h-8 rounded-full bg-white border border-[#E0DBD4] flex items-center justify-center text-sm font-bold text-[#1A1A1A] cursor-pointer hover:bg-neutral-100 mr-1"
             title="Back"
           >
-            ←
+            <ChevronLeftIcon className="w-4 h-4" />
           </button>
         )}
         <span className="text-[14px] md:text-[16px] font-black text-[#F5821F] tracking-tight">
@@ -46,14 +36,15 @@ export default function Navbar({ contextText = 'Story Swap', showBack = false, o
         <span className="text-[11px] md:text-[12px] font-bold text-[#999999] tracking-wider uppercase truncate max-w-[160px] md:max-w-xs hidden sm:inline">
           {contextText}
         </span>
-        {isHost && (
+        {isHost && sessionId && <EndSessionButton sessionId={sessionId} />}
+        {isHost && !sessionId && (
           <button
             type="button"
-            onClick={handleExitToGummyGum}
+            onClick={returnToGummyGum}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-[#1A1A1A] hover:bg-slate-50 transition-colors shadow-xs cursor-pointer"
-            title="Back to GummyGum"
           >
-            <span>← Back to GummyGum</span>
+            <ChevronLeftIcon className="w-3.5 h-3.5" />
+            <span>GummyGum</span>
           </button>
         )}
       </div>

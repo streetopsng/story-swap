@@ -8,7 +8,9 @@ import Toast from '../common/Toast';
 import { CATEGORIES } from '../../utils/questionBank';
 import { createSession } from '../../firebase/sessionService';
 import { sendBulkSessionInvitations, isBrevoConfigured } from '../../services/emailService';
-import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon } from '../common/Icons';
+import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon, ChevronRightIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
+import { randomAvatarId } from '../../lib/avatars';
 
 export default function HostSetup() {
   const navigate = useNavigate();
@@ -58,7 +60,6 @@ export default function HostSetup() {
     setTeammates((prev) => prev.map((t) => ({ ...t, selected: !allSelected })));
   };
 
-  const defaultAvatars = ['🦊', '🐻', '🐯', '🦁', '🐺', '🦅', '🐬', '🦋', '🐸', '🦄'];
 
   const handleAddTeammate = (e) => {
     e.preventDefault();
@@ -72,7 +73,7 @@ export default function HostSetup() {
       return;
     }
 
-    const randomAv = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+    const randomAv = randomAvatarId();
     setTeammates((prev) => [
       ...prev,
       {
@@ -114,7 +115,7 @@ export default function HostSetup() {
         if (!existing.has(email)) {
           existing.add(email);
           addedCount++;
-          const randomAv = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+          const randomAv = randomAvatarId();
           newItems.push({
             id: `bulk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             name: email.split('@')[0],
@@ -323,10 +324,10 @@ export default function HostSetup() {
                             : 'border-[#E0DBD4] bg-white'
                         }`}
                       >
-                        {teammate.selected && '✓'}
+                        {teammate.selected && <CheckIcon className="w-3 h-3" />}
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] flex items-center justify-center text-sm shrink-0">
-                        {teammate.av}
+                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                        <Avatar id={teammate.av} className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-bold text-[#1A1A1A] truncate">
@@ -342,7 +343,7 @@ export default function HostSetup() {
                         className="text-xs text-[#999999] hover:text-[#E8334A] px-1.5 py-1 rounded cursor-pointer"
                         title="Remove"
                       >
-                        ✕
+                        <CloseIcon className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))
@@ -380,7 +381,7 @@ export default function HostSetup() {
                     onClick={() => setIsBulkModalOpen(true)}
                     className="text-xs font-bold text-[#F5821F] hover:text-[#E8710A] underline cursor-pointer flex items-center gap-1"
                   >
-                    📋 Bulk paste emails
+                    <ClipboardIcon className="w-3.5 h-3.5" /> Bulk paste emails
                   </button>
                 </div>
               </form>
@@ -406,7 +407,7 @@ export default function HostSetup() {
                     className="accent-[#F5821F] w-4 h-4 mt-0.5 rounded cursor-pointer shrink-0"
                   />
                   <span>
-                    ✉️ Automatically email game link to invited teammates via Brevo
+                    Automatically email game link to invited teammates via Brevo
                   </span>
                 </label>
               )}
@@ -417,7 +418,7 @@ export default function HostSetup() {
                 disabled={isSubmitting}
                 className="py-4 text-base mt-2"
               >
-                {isSubmitting ? 'Launching...' : 'Launch session — notify team ›'}
+                {isSubmitting ? 'Launching...' : <>Launch session and notify team <ChevronRightIcon className="w-4 h-4" /></>}
               </Button>
               <p className="text-[11px] text-[#999999] text-center leading-relaxed">
                 You will land in the host lobby with a live invite link to share with your team.
