@@ -396,3 +396,55 @@ export async function endSession(sessionId) {
   }
 }
 
+
+async function patchSession(sessionId, updates) {
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'sessions', sessionId), updates);
+      return;
+    } catch (error) {
+      console.error('Firestore patchSession error:', error);
+    }
+  }
+
+  const session = getLocalStore(`session_${sessionId}`);
+  if (session) {
+    setLocalStore(`session_${sessionId}`, { ...session, ...updates });
+  }
+}
+
+/**
+ * Heartbeat from any connected client, used to tell an abandoned in-progress
+ * session apart from a long-running live one.
+ */
+export function touchSessionActivity(sessionId) {
+  return patchSession(sessionId, { lastActivity: Date.now() });
+}
+
+export function markSessionAbandoned(sessionId) {
+  return patchSession(sessionId, { status: 'expired', abandoned: true, updatedAt: Date.now() });
+}
+
+/**
+ * Persist a group's current speaker so the turn clock survives refreshes and
+ * stays shared across the group's devices.
+ */
+export async function setGroupTurn(sessionId, groupIndex, round, index) {
+  const entry = { round, index, startedAt: Date.now() };
+  if (isFirebaseConfigured && db) {
+    try {
+      await updateDoc(doc(db, 'sessions', sessionId), { [`turnState.${groupIndex}`]: entry });
+      return;
+    } catch (error) {
+      console.error('Firestore setGroupTurn error:', error);
+    }
+  }
+
+  const session = getLocalStore(`session_${sessionId}`);
+  if (session) {
+    setLocalStore(`session_${sessionId}`, {
+      ...session,
+      turnState: { ...(session.turnState || {}), [groupIndex]: entry },
+    });
+  }
+}

@@ -7,7 +7,13 @@ import HostControl from './components/host/HostControl';
 import HostFinish from './components/host/HostFinish';
 import PlayerJoinFlow from './components/player/PlayerJoinFlow';
 import { resolveGummyGumLaunch, returnToGummyGum } from './lib/gummygumSession';
-import { getSession, createSession, subscribeSession } from './firebase/sessionService';
+import {
+  getSession,
+  createSession,
+  subscribeSession,
+  touchSessionActivity,
+  markSessionAbandoned,
+} from './firebase/sessionService';
 
 import LoadingScreen from './components/common/LoadingScreen';
 import SessionExpiredModal from './components/modals/SessionExpiredModal';
@@ -63,6 +69,13 @@ const GummyGumCancelledScreen = ({ isHost = false }) => (
   </div>
 );
 
+// Hours, not the lobby's 20 min: a round can legitimately run long, but an
+// in-progress session with no connected client this long is abandoned.
+const ABANDON_THRESHOLD_MS = 3 * 60 * 60 * 1000;
+const HEARTBEAT_INTERVAL_MS = 60 * 1000;
+
+const toMillis = (value) => (value?.toMillis ? value.toMillis() : value);
+
 function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,14 +99,41 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
       if (code) {
         routedRef.current = true;
         setGgExpired(false);
+
+        let existing = null;
+        try {
+          existing = await getSession(code);
+        } catch (err) {
+          console.error('Session lookup failed:', err);
+        }
+
+        // Checked before this client's heartbeat starts so a returning
+        // client can't mask a genuinely abandoned session.
+        if (existing?.status === 'in-progress') {
+          const lastActivity =
+            toMillis(existing.lastActivity) ||
+            toMillis(existing.updatedAt) ||
+            existing.roundStartedAt ||
+            toMillis(existing.createdAt);
+          if (lastActivity && Date.now() - lastActivity >= ABANDON_THRESHOLD_MS) {
+            await markSessionAbandoned(code);
+          }
+        }
+
+        let latestStatus = null;
+        setInterval(() => {
+          if (latestStatus === 'in-progress') touchSessionActivity(code);
+        }, HEARTBEAT_INTERVAL_MS);
+
         // Listen to session for cancellation and lobby expiration
         subscribeSession(code, (sessData) => {
+          latestStatus = sessData?.status || null;
           if (!sessData || sessData.status === 'cancelled' || sessData.status === 'ended') {
             setGgCancelled(true);
             return;
           }
           if (sessData.status === 'expired') {
-            setGgExpired(true);
+            setGgExpired(sessData.abandoned ? 'game' : 'lobby');
             return;
           }
           // Idle lobby sessions expire after 20 minutes of inactivity.
@@ -103,14 +143,13 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
             ? sessData.createdAt.toMillis()
             : sessData.createdAt;
           if (sessData.status === 'lobby' && createdAtMs && Date.now() - createdAtMs >= 20 * 60 * 1000) {
-            setGgExpired(true);
+            setGgExpired('lobby');
             return;
           }
         });
 
         if (isHost) {
           try {
-            const existing = await getSession(code);
             // Never recreate an existing session here, even if ended/expired —
             // that would silently resurrect a cancelled room instead of letting
             // the subscribeSession listener above route away from it.
@@ -142,6 +181,7 @@ export default function App() {
   const [ggChecked, setGgChecked] = useState(false);
   const [ggSession, setGgSession] = useState(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  // false, or the phase that expired: 'lobby' | 'game'
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   const handleGgSession = (sess) => {
@@ -175,7 +215,9 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         )}
-        {isSessionExpired && <SessionExpiredModal isHost={Boolean(ggSession?.isHost)} />}
+        {isSessionExpired && (
+          <SessionExpiredModal isHost={Boolean(ggSession?.isHost)} context={isSessionExpired} />
+        )}
       </BrowserRouter>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
 import Button from '../common/Button';
@@ -10,8 +10,11 @@ import {
   subscribeSession,
   subscribeParticipants,
   joinSession,
+  setGroupTurn,
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
+
+const TURN_SECONDS = 60;
 
 export default function PlayerJoinFlow() {
   const { sessionId } = useParams();
@@ -62,10 +65,7 @@ export default function PlayerJoinFlow() {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  // Turn state for current round
-  const [turnIndex, setTurnIndex] = useState(0);
-  const [turnTimeLeft, setTurnTimeLeft] = useState(60);
-  const timerRef = useRef(null);
+  const [now, setNow] = useState(() => Date.now());
 
   // Auto-register saved identity into session if returning
   useEffect(() => {
@@ -113,34 +113,14 @@ export default function PlayerJoinFlow() {
     };
   }, [sessionId]);
 
-  // Track current round to reset turns when round advances
   const currentRoundIndex = session?.currentRound ?? 0;
-  const prevRoundRef = useRef(currentRoundIndex);
-  if (currentRoundIndex !== prevRoundRef.current) {
-    prevRoundRef.current = currentRoundIndex;
-    setTurnIndex(0);
-    setTurnTimeLeft(60);
-  }
 
-  // Turn countdown timer
   useEffect(() => {
-    if (step !== 'round') {
-      clearInterval(timerRef.current);
-      return;
-    }
-
-    timerRef.current = setInterval(() => {
-      setTurnTimeLeft((prev) => {
-        if (prev <= 1) {
-          setTurnIndex((t) => t + 1);
-          return 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
-  }, [step, turnIndex]);
+    if (step !== 'round') return;
+    setNow(Date.now());
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [step]);
 
   // Save identity and join session in Firestore
   const handleSaveIdentity = async () => {
@@ -192,6 +172,16 @@ export default function PlayerJoinFlow() {
     )
   );
   const myGroup = foundGroup || allGroups[0] || [];
+  const myGroupIndex = foundGroup ? allGroups.indexOf(foundGroup) : 0;
+
+  // Turn clock derives from persisted timestamps so a refresh resumes mid-turn.
+  const storedTurn = session?.turnState?.[myGroupIndex];
+  const turnBase = storedTurn && storedTurn.round === currentRoundIndex
+    ? storedTurn
+    : { index: 0, startedAt: session?.roundStartedAt || now };
+  const turnElapsedSec = Math.max(0, Math.floor((now - turnBase.startedAt) / 1000));
+  const turnIndex = turnBase.index + Math.floor(turnElapsedSec / TURN_SECONDS);
+  const turnTimeLeft = TURN_SECONDS - (turnElapsedSec % TURN_SECONDS);
 
   const currentSpeaker = myGroup[turnIndex % (myGroup.length || 1)];
   const isMyTurn =
@@ -200,8 +190,7 @@ export default function PlayerJoinFlow() {
       (currentSpeaker.name && currentSpeaker.name.toLowerCase() === name.toLowerCase()));
 
   const handleFinishMyTurn = () => {
-    setTurnIndex((t) => t + 1);
-    setTurnTimeLeft(60);
+    setGroupTurn(sessionId, myGroupIndex, currentRoundIndex, turnIndex + 1).catch(() => {});
   };
 
   const totalRounds = session?.prompts?.length || session?.roundCount || 3;
