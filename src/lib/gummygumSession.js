@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_GUMMYGUM_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_GUMMYGUM_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : 'https://paige-server.onrender.com');
 const STORAGE_KEY = 'gummygum_launch_session';
 
 export function getGummyGumSession() {

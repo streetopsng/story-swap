@@ -3,9 +3,9 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 
-const getEnv = (...keys) => {
-  for (const k of keys) {
-    const val = import.meta.env[k];
+// Vite only inlines literal import.meta.env.X reads, so callers pass values, not key names.
+const getEnv = (...vals) => {
+  for (const val of vals) {
     if (val !== undefined && val !== null && String(val).trim() !== '') {
       return String(val).trim();
     }
@@ -14,14 +14,14 @@ const getEnv = (...keys) => {
 };
 
 const firebaseConfig = {
-  apiKey: getEnv('VITE_FIREBASE_API_KEY', 'FIREBASE_API_KEY', 'NEXT_PUBLIC_FIREBASE_API_KEY'),
-  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN', 'FIREBASE_AUTH_DOMAIN', 'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
-  databaseURL: getEnv('VITE_FIREBASE_DATABASE_URL', 'FIREBASE_DATABASE_URL', 'NEXT_PUBLIC_FIREBASE_DATABASE_URL'),
-  projectId: getEnv('VITE_FIREBASE_PROJECT_ID', 'FIREBASE_PROJECT_ID', 'NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
-  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET', 'FIREBASE_STORAGE_BUCKET', 'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET'),
-  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', 'FIREBASE_MESSAGING_SENDER_ID', 'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
-  appId: getEnv('VITE_FIREBASE_APP_ID', 'FIREBASE_APP_ID', 'NEXT_PUBLIC_FIREBASE_APP_ID'),
-  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID', 'FIREBASE_MEASUREMENT_ID', 'NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID'),
+  apiKey: getEnv(import.meta.env.VITE_FIREBASE_API_KEY, import.meta.env.FIREBASE_API_KEY, import.meta.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+  authDomain: getEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, import.meta.env.FIREBASE_AUTH_DOMAIN, import.meta.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+  databaseURL: getEnv(import.meta.env.VITE_FIREBASE_DATABASE_URL, import.meta.env.FIREBASE_DATABASE_URL, import.meta.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL),
+  projectId: getEnv(import.meta.env.VITE_FIREBASE_PROJECT_ID, import.meta.env.FIREBASE_PROJECT_ID, import.meta.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+  storageBucket: getEnv(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, import.meta.env.FIREBASE_STORAGE_BUCKET, import.meta.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: getEnv(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, import.meta.env.FIREBASE_MESSAGING_SENDER_ID, import.meta.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+  appId: getEnv(import.meta.env.VITE_FIREBASE_APP_ID, import.meta.env.FIREBASE_APP_ID, import.meta.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+  measurementId: getEnv(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID, import.meta.env.FIREBASE_MEASUREMENT_ID, import.meta.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID),
 };
 
 export const isFirebaseConfigured = Boolean(
