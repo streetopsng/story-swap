@@ -6,13 +6,14 @@ import HostLobby from './components/host/HostLobby';
 import HostControl from './components/host/HostControl';
 import HostFinish from './components/host/HostFinish';
 import PlayerJoinFlow from './components/player/PlayerJoinFlow';
-import { resolveGummyGumLaunch, returnToGummyGum, hostExitInProgressRef } from './lib/gummygumSession';
+import { resolveGummyGumLaunch, returnToGummyGum, hostExitInProgressRef, watchHubSessionStatus } from './lib/gummygumSession';
 import {
   getSession,
   createSession,
   subscribeSession,
   touchSessionActivity,
   markSessionAbandoned,
+  endSession,
   reopenLobby,
   CLOSED_STATUSES,
 } from './firebase/sessionService';
@@ -184,8 +185,9 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
         }, HEARTBEAT_INTERVAL_MS);
 
         let seenDoc = false;
+        let hubEnded = false;
         subscribeSession(code, (sessData) => {
-          if (hostExitInProgressRef.current) return;
+          if (hostExitInProgressRef.current || hubEnded) return;
           latestStatus = sessData?.status || null;
           // A missing doc only means "ended" once it has existed; before that it's still being created.
           if (!sessData) {
@@ -202,6 +204,32 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
             return;
           }
           setGgExpired(isIdleLobby(sessData) ? 'lobby' : false);
+        });
+
+        // The host may end the session from the hub, which never touches this room.
+        const hostedSessionId = session?.hostedSessionId;
+        watchHubSessionStatus({
+          pin: session ? code : null,
+          hostedSessionId,
+          onEnded: async (hubSession) => {
+            if (hostExitInProgressRef.current || hubEnded) return;
+            hubEnded = true;
+            const completed = latestStatus === 'completed';
+            if (!isHost) {
+              setGgExpired(false);
+              setGgCancelled(completed ? 'completed' : 'ended');
+              return;
+            }
+            hostExitInProgressRef.current = true;
+            // A newer re-run owns the PIN's room now, so only mark it ended if it is still ours.
+            if (String(hubSession.id) === String(hostedSessionId)) {
+              await Promise.race([
+                endSession(code, { completed }).catch(() => {}),
+                new Promise((resolve) => setTimeout(resolve, 5000)),
+              ]);
+            }
+            returnToGummyGum();
+          },
         });
 
         if (isHost) {

@@ -22,7 +22,15 @@ async function verifyLaunchTokenOnce(ggt) {
       body: JSON.stringify({ token: ggt }),
     });
     const body = await res.json();
-    if (!res.ok || !body.success) return null;
+    if (!res.ok || !body.success) {
+      const fallbackUrl = body?.data?.fallbackUrl;
+      // A rejected invite link goes to the hub's /join page, which explains the specific reason.
+      if (typeof fallbackUrl === 'string' && fallbackUrl.startsWith('https://gummygum.app/')) {
+        window.location.replace(fallbackUrl);
+        return new Promise(() => {});
+      }
+      return null;
+    }
     return body;
   } catch (err) {
     console.error('GummyGum launch verify failed', err);
@@ -179,4 +187,50 @@ export function returnToGummyGum() {
   sessionStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(STORAGE_KEY);
   window.location.href = hub;
+}
+
+const HUB_STATUS_POLL_MS = 15000;
+
+// The hub can't write to this experience's realtime DB, so a hub-side end is only visible via the backend.
+export function watchHubSessionStatus({ pin, hostedSessionId, onEnded }) {
+  if (typeof window === 'undefined' || !pin || !hostedSessionId) return () => {};
+  let stopped = false;
+  let inFlight = false;
+  let timer = null;
+
+  const stop = () => {
+    stopped = true;
+    clearInterval(timer);
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
+
+  const check = async () => {
+    if (stopped || inFlight || document.hidden) return;
+    inFlight = true;
+    try {
+      const res = await fetch(`${API_URL}/api/gummygum/sessions/by-pin/${encodeURIComponent(pin)}`);
+      if (!res.ok) return;
+      const body = await res.json();
+      const data = body?.data;
+      if (stopped || !body?.success || !data?.id) return;
+      const isOurs = String(data.id) === String(hostedSessionId);
+      if (!isOurs || data.status === 'Ended') {
+        stop();
+        onEnded(data);
+      }
+    } catch {
+      // Network errors never end the session.
+    } finally {
+      inFlight = false;
+    }
+  };
+
+  function onVisibility() {
+    if (!document.hidden) check();
+  }
+
+  document.addEventListener('visibilitychange', onVisibility);
+  timer = setInterval(check, HUB_STATUS_POLL_MS);
+  check();
+  return stop;
 }

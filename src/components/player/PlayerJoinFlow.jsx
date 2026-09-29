@@ -13,7 +13,7 @@ import {
   setGroupTurn,
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
-import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon } from '../common/Icons';
+import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon, LockIcon } from '../common/Icons';
 import Avatar from '../common/Avatar';
 import { isAvatarId, randomAvatarId } from '../../lib/avatars';
 
@@ -27,6 +27,9 @@ export default function PlayerJoinFlow() {
   const ggSession = getGummyGumSession();
   const queryEmail = (searchParams.get('email') || ggSession?.player?.email || '').toLowerCase().trim();
   const queryName = searchParams.get('name') || ggSession?.player?.name || '';
+  // GummyGum already knows who the participant is, so the name is shown but not editable.
+  const isNameLocked = Boolean(ggSession && queryName);
+  const hostedSessionId = ggSession?.hostedSessionId || null;
 
   // Persistent player identity in localStorage
   const savedIdentity = useMemo(() => {
@@ -77,9 +80,9 @@ export default function PlayerJoinFlow() {
   // Auto-register saved identity into session if returning
   useEffect(() => {
     if (savedIdentity && sessionId) {
-      joinSession(sessionId, savedIdentity).catch(() => {});
+      joinSession(sessionId, { ...savedIdentity, hostedSessionId }).catch(() => {});
     }
-  }, [savedIdentity, sessionId]);
+  }, [savedIdentity, sessionId, hostedSessionId]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -146,7 +149,7 @@ export default function PlayerJoinFlow() {
     };
 
     try {
-      await joinSession(sessionId, identity);
+      await joinSession(sessionId, { ...identity, hostedSessionId });
       localStorage.setItem(`story_swap_player_${sessionId}`, JSON.stringify(identity));
       if (normEmail) {
         localStorage.setItem(`story_swap_avatar_${normEmail}`, avatar);
@@ -282,7 +285,7 @@ export default function PlayerJoinFlow() {
 
         {/* ── STEP 3: PLAYER IDENTITY (Name & Avatar) ── */}
         {step === 'identity' && (
-          <div className="flex-1 flex flex-col justify-between p-4 md:p-10">
+          <div className="flex-1 flex flex-col justify-between p-4 pb-32 md:p-10">
             <header className="pt-2 pb-1 flex items-center justify-between">
               <span className="text-[13px] md:text-[15px] font-black text-[#F5821F]">GummyGum</span>
               <span className="text-[11px] md:text-[12px] font-bold text-[#999999] uppercase tracking-wider truncate max-w-[200px]">
@@ -312,8 +315,24 @@ export default function PlayerJoinFlow() {
                 </button>
               </div>
 
-              {/* Name Input Card — only if not already provided by GummyGum */}
-              {!queryName && (
+              {isNameLocked ? (
+                <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-sm md:shadow-none">
+                  <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
+                    Your name
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="player-name-input-flow"
+                      value={name}
+                      readOnly
+                      aria-readonly="true"
+                      className="text-base py-3 pr-10 bg-[#F5F3EF] text-[#555555] cursor-not-allowed focus:border-[#E0DBD4]"
+                    />
+                    <LockIcon className="w-4 h-4 text-[#999999] absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                  <p className="text-[11px] text-[#999999] mt-2">From your GummyGum invite</p>
+                </div>
+              ) : (
                 <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-sm md:shadow-none">
                   <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
                     Your name
@@ -330,18 +349,22 @@ export default function PlayerJoinFlow() {
               )}
             </div>
 
-            <footer className="space-y-2 pt-6 max-w-sm mx-auto w-full">
-              <Button
-                variant="orange"
-                disabled={name.trim().length < 2}
-                onClick={() => setShowRulesModal(true)}
-                className="py-4 text-base"
-              >
-                Enter the lobby <ArrowRightIcon className="w-4 h-4" />
-              </Button>
-              <p className="text-[11px] text-[#999999] text-center">
-                Enter your name to continue
-              </p>
+            <footer className="fixed md:static bottom-0 inset-x-0 z-30 bg-[#EDEAE4] md:bg-transparent border-t border-[#E0DBD4] md:border-0 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)] md:p-0 md:pt-6">
+              <div className="space-y-2 max-w-sm mx-auto w-full">
+                <Button
+                  variant="orange"
+                  disabled={name.trim().length < 2}
+                  onClick={() => setShowRulesModal(true)}
+                  className="py-4 text-base"
+                >
+                  Enter the lobby <ArrowRightIcon className="w-4 h-4" />
+                </Button>
+                {!isNameLocked && (
+                  <p className="text-[11px] text-[#999999] text-center">
+                    Enter your name to continue
+                  </p>
+                )}
+              </div>
             </footer>
 
             <AvatarPickerModal
