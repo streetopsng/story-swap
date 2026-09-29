@@ -22,7 +22,15 @@ async function verifyLaunchTokenOnce(ggt) {
       body: JSON.stringify({ token: ggt }),
     });
     const body = await res.json();
-    if (!res.ok || !body.success) return null;
+    if (!res.ok || !body.success) {
+      const fallbackUrl = body?.data?.fallbackUrl;
+      // A rejected invite link goes to the hub's /join page, which explains the specific reason.
+      if (typeof fallbackUrl === 'string' && fallbackUrl.startsWith('https://gummygum.app/')) {
+        window.location.replace(fallbackUrl);
+        return new Promise(() => {});
+      }
+      return null;
+    }
     return body;
   } catch (err) {
     console.error('GummyGum launch verify failed', err);
