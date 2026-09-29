@@ -6,6 +6,7 @@ import {
   getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -143,6 +144,20 @@ export async function createSession({
         updatedAt: serverTimestamp(),
       });
 
+      // A reused PIN keeps the earlier room's participants subcollection; drop anyone not joined to this room.
+      if (hostedSessionId) {
+        try {
+          const existingParts = await getDocs(collection(db, 'sessions', sessionId, 'participants'));
+          await Promise.all(
+            existingParts.docs
+              .filter((d) => d.data().hostedSessionId !== hostedSessionId)
+              .map((d) => deleteDoc(d.ref))
+          );
+        } catch (error) {
+          console.error('Firestore stale participant cleanup error:', error);
+        }
+      }
+
       // Write initial participants if any were invited
       for (const p of initialParticipants) {
         const pRef = doc(db, 'sessions', sessionId, 'participants', p.id);
@@ -157,7 +172,10 @@ export async function createSession({
 
   // Local fallback
   setLocalStore(`session_${sessionId}`, sessionData);
-  setLocalStore(`participants_${sessionId}`, initialParticipants);
+  const keptParticipants = hostedSessionId
+    ? getLocalStore(`participants_${sessionId}`, []).filter((p) => p.hostedSessionId === hostedSessionId)
+    : [];
+  setLocalStore(`participants_${sessionId}`, [...keptParticipants, ...initialParticipants]);
   return sessionId;
 }
 
@@ -269,7 +287,7 @@ export function subscribeParticipants(sessionId, callback) {
 /**
  * Join or update player identity in session
  */
-export async function joinSession(sessionId, { email, name, avatar, dept = '' }) {
+export async function joinSession(sessionId, { email, name, avatar, dept = '', hostedSessionId = null }) {
   if (await isSessionClosed(sessionId)) return null;
   const normalizedEmail = email.trim().toLowerCase();
   const participantId = normalizedEmail || `p_${Date.now()}`;
@@ -282,6 +300,7 @@ export async function joinSession(sessionId, { email, name, avatar, dept = '' })
     dept,
     status: 'joined',
     joinedAt: Date.now(),
+    hostedSessionId,
   };
 
   if (isFirebaseConfigured && db) {
