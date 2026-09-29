@@ -16,6 +16,7 @@ import {
 import { getGummyGumSession } from '../../lib/gummygumSession';
 import EndSessionButton from '../common/EndSessionButton';
 import { ChevronRightIcon, MailIcon, HourglassIcon, CheckIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
 
 export default function HostLobby() {
   const { sessionId } = useParams();
@@ -251,11 +252,11 @@ export default function HostLobby() {
                           }`}
                         >
                           <div
-                            className={`w-10 h-10 rounded-full border-[1.5px] border-[#F5821F] flex items-center justify-center text-lg shrink-0 ${
+                            className={`w-10 h-10 rounded-full border-[1.5px] border-[#F5821F] overflow-hidden shrink-0 ${
                               isJoined ? 'bg-[#FDE8D0]' : 'bg-[#EDEAE4]'
                             }`}
                           >
-                            {p.av || '🙂'}
+                            <Avatar id={p.av} className="w-full h-full" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[14px] font-bold text-[#1A1A1A] truncate">

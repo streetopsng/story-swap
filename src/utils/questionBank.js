@@ -63,7 +63,6 @@ export const QUESTION_BANK = {
 
 export const CATEGORIES = Object.keys(QUESTION_BANK);
 
-export const AVATAR_OPTIONS = ['🦊', '🐻', '🐯', '🦁', '🐺', '🦅', '🐬', '🦋', '🐸', '🦄', '🐙', '🦜', '🐧', '🦔', '🐵', '🦩'];
 
 function shuffle(arr) {
   const a = [...arr];

@@ -14,6 +14,8 @@ import {
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
 import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
+import { isAvatarId, randomAvatarId } from '../../lib/avatars';
 
 const TURN_SECONDS = 60;
 
@@ -30,12 +32,16 @@ export default function PlayerJoinFlow() {
   const savedIdentity = useMemo(() => {
     try {
       const data = localStorage.getItem(`story_swap_player_${sessionId}`);
-      if (data) return JSON.parse(data);
+      // Identities saved with a legacy emoji avatar re-pick from the hub set.
+      if (data) {
+        const parsed = JSON.parse(data);
+        return isAvatarId(parsed?.avatar) ? parsed : null;
+      }
       if (queryEmail) {
         const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
         const savedN = localStorage.getItem(`story_swap_name_${queryEmail}`) || queryName;
         const joined = localStorage.getItem(`story_swap_joined_${sessionId}_${queryEmail}`) === 'true';
-        if (joined && savedAv) {
+        if (joined && isAvatarId(savedAv)) {
           return { email: queryEmail, name: savedN, avatar: savedAv };
         }
       }
@@ -59,9 +65,9 @@ export default function PlayerJoinFlow() {
     if (savedIdentity?.avatar) return savedIdentity.avatar;
     if (queryEmail) {
       const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
-      if (savedAv) return savedAv;
+      if (isAvatarId(savedAv)) return savedAv;
     }
-    return '🙂';
+    return randomAvatarId();
   });
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
@@ -290,9 +296,9 @@ export default function PlayerJoinFlow() {
                 <button
                   type="button"
                   onClick={() => setIsAvatarModalOpen(true)}
-                  className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[#EDEAE4] border-3 border-[#1A1A1A] flex items-center justify-center text-5xl md:text-6xl cursor-pointer hover:scale-105 active:scale-95 transition-transform"
+                  className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-[#EDEAE4] border-3 border-[#1A1A1A] overflow-hidden cursor-pointer hover:scale-105 active:scale-95 transition-transform"
                 >
-                  {avatar}
+                  <Avatar id={avatar} className="w-full h-full" />
                 </button>
                 <div className="text-[18px] md:text-[20px] font-extrabold text-[#1A1A1A] mt-3">
                   {name || '—'}
@@ -360,8 +366,8 @@ export default function PlayerJoinFlow() {
         {/* ── STEP 4: SAVING ANIMATION ── */}
         {step === 'saving' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-8">
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#F5821F] flex items-center justify-center text-5xl md:text-6xl animate-pulse-soft">
-              {avatar}
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#F5821F] p-1.5 animate-pulse-soft">
+              <Avatar id={avatar} className="w-full h-full" />
             </div>
             <div className="text-[18px] md:text-[22px] font-extrabold text-[#1A1A1A]">
               Saving your identity...
@@ -397,8 +403,8 @@ export default function PlayerJoinFlow() {
             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3.5 my-2 max-w-md mx-auto w-full">
               {/* You Card */}
               <div className="flex items-center gap-3 bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-4 shadow-sm md:shadow-none">
-                <div className="w-12 h-12 rounded-full bg-[#FDE8D0] border-2 border-[#F5821F] flex items-center justify-center text-2xl shrink-0">
-                  {avatar}
+                <div className="w-12 h-12 rounded-full bg-[#FDE8D0] border-2 border-[#F5821F] overflow-hidden shrink-0">
+                  <Avatar id={avatar} className="w-full h-full" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-[16px] font-extrabold text-[#1A1A1A] truncate">
@@ -424,8 +430,8 @@ export default function PlayerJoinFlow() {
                       key={p.id || p.email}
                       className="flex items-center gap-2.5 py-2.5 px-3 bg-white md:bg-[#FAF7F2] rounded-xl border border-[#E0DBD4]"
                     >
-                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] flex items-center justify-center text-sm shrink-0">
-                        {p.av || '🙂'}
+                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                        <Avatar id={p.av} className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-bold text-[#1A1A1A] truncate">
@@ -486,8 +492,8 @@ export default function PlayerJoinFlow() {
                         key={m.id || m.email || m.name}
                         className="flex items-center gap-1.5 bg-[#FDE8D0] border border-[#F5821F] rounded-full py-1.5 pl-1.5 pr-3.5 text-[12px] font-bold text-[#1A1A1A]"
                       >
-                        <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-xs shrink-0">
-                          {m.av || '🙂'}
+                        <div className="w-5 h-5 rounded-full bg-white overflow-hidden shrink-0">
+                          <Avatar id={m.av} className="w-full h-full" />
                         </div>
                         <span>{isThisMe ? `${m.name || 'You'} (You)` : m.name}</span>
                       </div>

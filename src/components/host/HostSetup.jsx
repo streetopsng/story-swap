@@ -9,6 +9,8 @@ import { CATEGORIES } from '../../utils/questionBank';
 import { createSession } from '../../firebase/sessionService';
 import { sendBulkSessionInvitations, isBrevoConfigured } from '../../services/emailService';
 import { CheckIcon, CloseIcon, PeopleIcon, ClipboardIcon, MailIcon, ChevronRightIcon } from '../common/Icons';
+import Avatar from '../common/Avatar';
+import { randomAvatarId } from '../../lib/avatars';
 
 export default function HostSetup() {
   const navigate = useNavigate();
@@ -58,7 +60,6 @@ export default function HostSetup() {
     setTeammates((prev) => prev.map((t) => ({ ...t, selected: !allSelected })));
   };
 
-  const defaultAvatars = ['🦊', '🐻', '🐯', '🦁', '🐺', '🦅', '🐬', '🦋', '🐸', '🦄'];
 
   const handleAddTeammate = (e) => {
     e.preventDefault();
@@ -72,7 +73,7 @@ export default function HostSetup() {
       return;
     }
 
-    const randomAv = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+    const randomAv = randomAvatarId();
     setTeammates((prev) => [
       ...prev,
       {
@@ -114,7 +115,7 @@ export default function HostSetup() {
         if (!existing.has(email)) {
           existing.add(email);
           addedCount++;
-          const randomAv = defaultAvatars[Math.floor(Math.random() * defaultAvatars.length)];
+          const randomAv = randomAvatarId();
           newItems.push({
             id: `bulk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             name: email.split('@')[0],
@@ -325,8 +326,8 @@ export default function HostSetup() {
                       >
                         {teammate.selected && <CheckIcon className="w-3 h-3" />}
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] flex items-center justify-center text-sm shrink-0">
-                        {teammate.av}
+                      <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                        <Avatar id={teammate.av} className="w-full h-full" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-bold text-[#1A1A1A] truncate">

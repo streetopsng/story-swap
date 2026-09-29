@@ -129,7 +129,7 @@ export async function createSession({
     email: typeof item === 'string' ? item.toLowerCase() : item.email.toLowerCase(),
     name: typeof item === 'object' && item.name ? item.name : '',
     dept: typeof item === 'object' && item.dept ? item.dept : '',
-    av: typeof item === 'object' && item.av ? item.av : '🙂',
+    av: typeof item === 'object' && item.av ? item.av : null,
     status: 'invited',
     joinedAt: null,
   }));
@@ -278,7 +278,7 @@ export async function joinSession(sessionId, { email, name, avatar, dept = '' })
     id: participantId,
     email: normalizedEmail,
     name: name.trim(),
-    av: avatar || '🙂',
+    av: avatar || null,
     dept,
     status: 'joined',
     joinedAt: Date.now(),
