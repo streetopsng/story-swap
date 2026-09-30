@@ -11,6 +11,8 @@ import {
   subscribeParticipants,
   joinSession,
   setGroupTurn,
+  getSession,
+  getParticipants,
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
 import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon, LockIcon } from '../common/Icons';
@@ -30,6 +32,7 @@ export default function PlayerJoinFlow() {
   // GummyGum already knows who the participant is, so the name is shown but not editable.
   const isNameLocked = Boolean(ggSession && queryName);
   const hostedSessionId = ggSession?.hostedSessionId || null;
+  const byEmail = Boolean(ggSession && queryEmail);
 
   // Persistent player identity in localStorage
   const savedIdentity = useMemo(() => {
@@ -38,7 +41,9 @@ export default function PlayerJoinFlow() {
       // Identities saved with a legacy emoji avatar re-pick from the hub set.
       if (data) {
         const parsed = JSON.parse(data);
-        return isAvatarId(parsed?.avatar) ? parsed : null;
+        // A shared device may hold another invitee's identity for this room.
+        const sameInvitee = !queryEmail || (parsed?.email || '').toLowerCase().trim() === queryEmail;
+        if (sameInvitee && isAvatarId(parsed?.avatar)) return parsed;
       }
       if (queryEmail) {
         const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
@@ -77,12 +82,52 @@ export default function PlayerJoinFlow() {
 
   const [now, setNow] = useState(() => Date.now());
 
+  const rememberIdentity = (identity) => {
+    localStorage.setItem(`story_swap_player_${sessionId}`, JSON.stringify(identity));
+    if (identity.email) {
+      localStorage.setItem(`story_swap_avatar_${identity.email}`, identity.avatar);
+      localStorage.setItem(`story_swap_name_${identity.email}`, identity.name);
+      localStorage.setItem(`story_swap_joined_${sessionId}_${identity.email}`, 'true');
+    }
+  };
+
   // Auto-register saved identity into session if returning
   useEffect(() => {
     if (savedIdentity && sessionId) {
-      joinSession(sessionId, { ...savedIdentity, hostedSessionId }).catch(() => {});
+      joinSession(sessionId, { ...savedIdentity, hostedSessionId, byEmail })
+        .then((joined) => { if (joined?.name) setName(joined.name); })
+        .catch(() => {});
     }
-  }, [savedIdentity, sessionId, hostedSessionId]);
+  }, [savedIdentity, sessionId, hostedSessionId, byEmail]);
+
+  // A GummyGum invitee rejoining from a new device resumes the record already in the room.
+  useEffect(() => {
+    if (savedIdentity || !byEmail || !sessionId) return;
+    let cancelled = false;
+    (async () => {
+      const list = await getParticipants(sessionId);
+      const mine = list.find(
+        (p) => p.status === 'joined'
+          && (p.id === queryEmail || (p.email || '').toLowerCase().trim() === queryEmail)
+          && (!hostedSessionId || !p.hostedSessionId || p.hostedSessionId === hostedSessionId)
+      );
+      if (cancelled || !mine) return;
+      const identity = {
+        email: queryEmail,
+        name: mine.name || queryName,
+        avatar: isAvatarId(mine.av) ? mine.av : avatar,
+      };
+      setName(identity.name);
+      setAvatar(identity.avatar);
+      rememberIdentity(identity);
+      await joinSession(sessionId, { ...identity, hostedSessionId, byEmail }).catch(() => {});
+      const current = await getSession(sessionId);
+      if (cancelled) return;
+      if (current?.status === 'completed') setStep('finish');
+      else setStep(current?.status === 'in-progress' ? 'round' : 'lobby');
+    })();
+    return () => { cancelled = true; };
+  }, [savedIdentity, byEmail, sessionId, queryEmail, hostedSessionId]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -149,13 +194,12 @@ export default function PlayerJoinFlow() {
     };
 
     try {
-      await joinSession(sessionId, { ...identity, hostedSessionId });
-      localStorage.setItem(`story_swap_player_${sessionId}`, JSON.stringify(identity));
-      if (normEmail) {
-        localStorage.setItem(`story_swap_avatar_${normEmail}`, avatar);
-        localStorage.setItem(`story_swap_name_${normEmail}`, name.trim());
-        localStorage.setItem(`story_swap_joined_${sessionId}_${normEmail}`, 'true');
+      const joined = await joinSession(sessionId, { ...identity, hostedSessionId, byEmail });
+      if (joined?.name) {
+        identity.name = joined.name;
+        setName(joined.name);
       }
+      rememberIdentity(identity);
       setTimeout(() => {
         if (session?.status === 'in-progress') {
           setStep('round');

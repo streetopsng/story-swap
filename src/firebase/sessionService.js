@@ -287,19 +287,38 @@ export function subscribeParticipants(sessionId, callback) {
 /**
  * Join or update player identity in session
  */
-export async function joinSession(sessionId, { email, name, avatar, dept = '', hostedSessionId = null }) {
+export async function joinSession(sessionId, { email, name, avatar, dept = '', hostedSessionId = null, byEmail = false }) {
   if (await isSessionClosed(sessionId)) return null;
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = (email || '').trim().toLowerCase();
   const participantId = normalizedEmail || `p_${Date.now()}`;
+
+  let finalName = name.trim();
+  let mine = null;
+  // The invite email is the identity: the same email reclaims its record; a different email with the same name gets a suffix.
+  if (byEmail && normalizedEmail) {
+    const others = (await getParticipants(sessionId)).filter(
+      (p) => !hostedSessionId || !p.hostedSessionId || p.hostedSessionId === hostedSessionId
+    );
+    mine = others.find((p) => p.id === participantId || (p.email || '').toLowerCase() === normalizedEmail) || null;
+    if (mine?.name && mine.status === 'joined') {
+      finalName = mine.name;
+    } else {
+      const taken = (n) => others.some(
+        (p) => p.id !== participantId && p.status === 'joined' && (p.name || '').trim().toLowerCase() === n.toLowerCase()
+      );
+      let n = 2;
+      while (taken(finalName)) finalName = `${name.trim()} ${n++}`;
+    }
+  }
 
   const participantData = {
     id: participantId,
     email: normalizedEmail,
-    name: name.trim(),
-    av: avatar || null,
+    name: finalName,
+    av: avatar || mine?.av || null,
     dept,
     status: 'joined',
-    joinedAt: Date.now(),
+    joinedAt: (mine?.status === 'joined' && mine.joinedAt) || Date.now(),
     hostedSessionId,
   };
 
