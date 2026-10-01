@@ -47,6 +47,8 @@ export default function HostLobby() {
       setSession(data);
       if (data.status === 'in-progress') {
         navigate(`/host/${sessionId}/control`);
+      } else if (data.status === 'completed') {
+        navigate(`/host/${sessionId}/finish`);
       }
     });
 

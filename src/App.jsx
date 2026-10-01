@@ -157,10 +157,12 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
             // same launch must stay ended so a duplicate tab can't resurrect it.
             if (!existing || isFromEarlierRoom(existing, session?.hostedSessionId)) {
               const hostName = session?.player?.name || params.get('name') || 'Team';
+              const config = session?.config || {};
+              const configRounds = Number(config.roundCount);
               await createSession({
                 sessionId: code,
-                name: `${hostName}'s Story Swap`,
-                roundCount: 3,
+                name: (typeof config.name === 'string' && config.name.trim()) || `${hostName}'s Story Swap`,
+                roundCount: Number.isInteger(configRounds) && configRounds > 0 ? configRounds : 3,
                 invitedCount,
                 hostedSessionId: session?.hostedSessionId || null,
               });
@@ -220,6 +222,8 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
               setGgCancelled(completed ? 'completed' : 'ended');
               return;
             }
+            // Our own natural-finish report ends the hosted session; keep the host on the finish screen.
+            if (completed && String(hubSession.id) === String(hostedSessionId) && hubSession.status === 'Ended') return;
             hostExitInProgressRef.current = true;
             // A newer re-run owns the PIN's room now, so only mark it ended if it is still ours.
             if (String(hubSession.id) === String(hostedSessionId)) {
