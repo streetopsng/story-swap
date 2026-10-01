@@ -225,7 +225,7 @@ export default function PlayerJoinFlow() {
         (m.name && m.name.toLowerCase() === myName)
     )
   );
-  const myGroup = foundGroup || allGroups[0] || [];
+  const myGroup = foundGroup || [];
   const myGroupIndex = foundGroup ? allGroups.indexOf(foundGroup) : 0;
 
   // Turn clock derives from persisted timestamps so a refresh resumes mid-turn.
@@ -543,9 +543,11 @@ export default function PlayerJoinFlow() {
                   {currentPrompt.text}
                 </h2>
 
-                <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-2 text-center">
-                  Your group this round
-                </div>
+                {foundGroup && (
+                  <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-2 text-center">
+                    Your group this round
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 justify-center">
                   {myGroup.map((m) => {
                     const isThisMe =
@@ -567,7 +569,15 @@ export default function PlayerJoinFlow() {
               </section>
 
               {/* Turn Card */}
-              {turnIndex >= myGroup.length && myGroup.length > 0 ? (
+              {!foundGroup ? (
+                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
+                  <EarIcon className="w-10 h-10 mx-auto mb-2 text-[#555]" />
+                  <div className="text-[18px] font-black text-[#1A1A1A]">You joined mid-round</div>
+                  <div className="text-[13px] text-[#555555] mt-1">
+                    You'll be placed in a group when the host starts the next round.
+                  </div>
+                </section>
+              ) : turnIndex >= myGroup.length && myGroup.length > 0 ? (
                 <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
                   <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 text-[#22A855]" />
                   <div className="text-[18px] font-black text-[#1A1A1A]">Round complete!</div>
