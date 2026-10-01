@@ -4,6 +4,9 @@ import confetti from 'canvas-confetti';
 import Navbar from '../common/Navbar';
 import EndSessionButton from '../common/EndSessionButton';
 import { CheckCircleIcon } from '../common/Icons';
+import { getSession, getParticipants } from '../../firebase/sessionService';
+import { getGummyGumSession, reportGummyGumResult } from '../../lib/gummygumSession';
+import { buildStorySwapReport } from '../../lib/storySwapReport';
 
 export default function HostFinish() {
   const { sessionId } = useParams();
@@ -15,6 +18,21 @@ export default function HostFinish() {
       origin: { y: 0.6 },
     });
   }, []);
+
+  // Report on natural finish so the hub records the session even if the host never clicks End session.
+  useEffect(() => {
+    const gg = getGummyGumSession();
+    if (!sessionId || !gg?.isHost || gg.reported) return;
+    let cancelled = false;
+    (async () => {
+      const current = await getSession(sessionId);
+      if (cancelled || current?.status !== 'completed') return;
+      const participants = await getParticipants(sessionId);
+      if (cancelled || getGummyGumSession()?.reported) return;
+      await reportGummyGumResult(buildStorySwapReport(current, participants));
+    })();
+    return () => { cancelled = true; };
+  }, [sessionId]);
 
   return (
     <main className="flex flex-col min-h-screen w-full mx-auto bg-[#EDEAE4] overflow-hidden">

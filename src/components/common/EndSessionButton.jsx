@@ -8,20 +8,7 @@ import {
   endGummyGumSession,
   hostExitInProgressRef,
 } from '../../lib/gummygumSession';
-
-const buildReport = (session, participants) => {
-  const host = getGummyGumSession()?.player?.name || 'Host';
-  const joined = participants.filter((p) => p.status === 'joined');
-  return {
-    experience: 'story-swap',
-    rounds: session?.prompts?.length || session?.roundCount || null,
-    participantCount: joined.length,
-    leaderboard: [
-      { name: host, score: 0, isHost: true },
-      ...joined.map((p) => ({ name: p.name || p.email || 'Player', score: 0 })),
-    ],
-  };
-};
+import { buildStorySwapReport } from '../../lib/storySwapReport';
 
 const TRIGGER_STYLES = {
   nav: 'flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E0DBD4] text-xs font-bold text-[#555] hover:text-red-600 hover:border-red-300 hover:bg-red-50/50 transition-colors shadow-xs cursor-pointer',
@@ -46,7 +33,7 @@ export default function EndSessionButton({ sessionId, variant = 'nav' }) {
         console.error('Failed to mark session ended:', err);
       }
     }
-    const report = completed ? buildReport(current, await getParticipants(sessionId)) : null;
+    const report = completed ? buildStorySwapReport(current, await getParticipants(sessionId)) : null;
     await endGummyGumSession({ completed, report });
   };
 

@@ -25,9 +25,9 @@ export default function GameRulesModal({ onConfirm, name }) {
               1
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-black text-[#1A1A1A]">Share your stories</div>
+              <div className="text-[13px] font-black text-[#1A1A1A]">Get a prompt and a small group</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                Write short responses to fun, thought-provoking prompts about work, hobbies, or life.
+                Each round, you're placed in a group of 2–3 teammates with a prompt about how you work and what you value.
               </div>
             </div>
           </div>
@@ -37,9 +37,9 @@ export default function GameRulesModal({ onConfirm, name }) {
               2
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-black text-[#1A1A1A]">Stories are swapped anonymously</div>
+              <div className="text-[13px] font-black text-[#1A1A1A]">Take turns sharing</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                Each round, everyone reads an anonymous teammate's story and votes on who they think wrote it.
+                Everyone gets about a minute to share their story while the rest of the group listens.
               </div>
             </div>
           </div>
@@ -49,9 +49,9 @@ export default function GameRulesModal({ onConfirm, name }) {
               3
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-black text-[#1A1A1A]">Discover & celebrate</div>
+              <div className="text-[13px] font-black text-[#1A1A1A]">New round, new group</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                See the big reveal, learn memorable facts about your team, and enjoy great conversation!
+                The host starts each round and groups reshuffle, so you hear from different teammates.
               </div>
             </div>
           </div>
@@ -61,7 +61,7 @@ export default function GameRulesModal({ onConfirm, name }) {
         <div className="p-3 bg-[#FFF9F2] border border-[#F5821F]/20 rounded-xl text-left flex items-center gap-2.5 mb-6">
           <BulbIcon className="w-4 h-4 shrink-0 text-[#F5821F]" />
           <span className="text-[11.5px] text-[#885215] font-medium leading-snug">
-            <strong>Pro tip:</strong> Keep your stories specific and personal, but avoid obvious clues like your job title!
+            <strong>Pro tip:</strong> Specific, personal stories spark the best conversations.
           </span>
         </div>
 

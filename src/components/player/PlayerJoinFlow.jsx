@@ -28,7 +28,7 @@ export default function PlayerJoinFlow() {
   const searchParams = new URLSearchParams(window.location.search);
   const ggSession = getGummyGumSession();
   const queryEmail = (searchParams.get('email') || ggSession?.player?.email || '').toLowerCase().trim();
-  const queryName = searchParams.get('name') || ggSession?.player?.name || '';
+  const queryName = (ggSession?.player?.name || '').trim() || searchParams.get('name') || '';
   // GummyGum already knows who the participant is, so the name is shown but not editable.
   const isNameLocked = Boolean(ggSession && queryName);
   const hostedSessionId = ggSession?.hostedSessionId || null;
@@ -43,11 +43,11 @@ export default function PlayerJoinFlow() {
         const parsed = JSON.parse(data);
         // A shared device may hold another invitee's identity for this room.
         const sameInvitee = !queryEmail || (parsed?.email || '').toLowerCase().trim() === queryEmail;
-        if (sameInvitee && isAvatarId(parsed?.avatar)) return parsed;
+        if (sameInvitee && isAvatarId(parsed?.avatar)) return isNameLocked ? { ...parsed, name: queryName } : parsed;
       }
       if (queryEmail) {
         const savedAv = localStorage.getItem(`story_swap_avatar_${queryEmail}`);
-        const savedN = localStorage.getItem(`story_swap_name_${queryEmail}`) || queryName;
+        const savedN = (isNameLocked ? '' : localStorage.getItem(`story_swap_name_${queryEmail}`)) || queryName;
         const joined = localStorage.getItem(`story_swap_joined_${sessionId}_${queryEmail}`) === 'true';
         if (joined && isAvatarId(savedAv)) {
           return { email: queryEmail, name: savedN, avatar: savedAv };
@@ -57,7 +57,7 @@ export default function PlayerJoinFlow() {
     } catch {
       return null;
     }
-  }, [sessionId, queryEmail, queryName]);
+  }, [sessionId, queryEmail, queryName, isNameLocked]);
 
   // Player step state: directly go to 'lobby' if already joined, or 'identity' (pre-filled) to pick avatar
   const [step, setStep] = useState(savedIdentity ? 'lobby' : 'identity');
@@ -114,7 +114,7 @@ export default function PlayerJoinFlow() {
       if (cancelled || !mine) return;
       const identity = {
         email: queryEmail,
-        name: mine.name || queryName,
+        name: (isNameLocked ? queryName : mine.name) || queryName,
         avatar: isAvatarId(mine.av) ? mine.av : avatar,
       };
       setName(identity.name);
@@ -225,7 +225,7 @@ export default function PlayerJoinFlow() {
         (m.name && m.name.toLowerCase() === myName)
     )
   );
-  const myGroup = foundGroup || allGroups[0] || [];
+  const myGroup = foundGroup || [];
   const myGroupIndex = foundGroup ? allGroups.indexOf(foundGroup) : 0;
 
   // Turn clock derives from persisted timestamps so a refresh resumes mid-turn.
@@ -361,18 +361,15 @@ export default function PlayerJoinFlow() {
 
               {isNameLocked ? (
                 <div className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 shadow-sm md:shadow-none">
-                  <label htmlFor="player-name-input-flow" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
+                  <p className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] mb-2">
                     Your name
-                  </label>
-                  <div className="relative">
-                    <Input
-                      id="player-name-input-flow"
-                      value={name}
-                      readOnly
-                      aria-readonly="true"
-                      className="text-base py-3 pr-10 bg-[#F5F3EF] text-[#555555] cursor-not-allowed focus:border-[#E0DBD4]"
-                    />
-                    <LockIcon className="w-4 h-4 text-[#999999] absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  </p>
+                  <div
+                    aria-readonly="true"
+                    className="w-full flex items-center gap-2.5 bg-[#F5F3EF] border-[1.5px] border-[#E0DBD4] rounded-[10px] px-3.5 py-3 text-base text-[#555555] font-sans"
+                  >
+                    <span className="flex-1 min-w-0 truncate">{name}</span>
+                    <LockIcon className="w-4 h-4 text-[#999999] shrink-0" />
                   </div>
                   <p className="text-[11px] text-[#999999] mt-2">From your GummyGum invite</p>
                 </div>
@@ -546,9 +543,11 @@ export default function PlayerJoinFlow() {
                   {currentPrompt.text}
                 </h2>
 
-                <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-2 text-center">
-                  Your group this round
-                </div>
+                {foundGroup && (
+                  <div className="text-[11px] font-extrabold tracking-wider uppercase text-[#555555] mb-2 text-center">
+                    Your group this round
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 justify-center">
                   {myGroup.map((m) => {
                     const isThisMe =
@@ -570,7 +569,15 @@ export default function PlayerJoinFlow() {
               </section>
 
               {/* Turn Card */}
-              {turnIndex >= myGroup.length && myGroup.length > 0 ? (
+              {!foundGroup ? (
+                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
+                  <EarIcon className="w-10 h-10 mx-auto mb-2 text-[#555]" />
+                  <div className="text-[18px] font-black text-[#1A1A1A]">You joined mid-round</div>
+                  <div className="text-[13px] text-[#555555] mt-1">
+                    You'll be placed in a group when the host starts the next round.
+                  </div>
+                </section>
+              ) : turnIndex >= myGroup.length && myGroup.length > 0 ? (
                 <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
                   <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 text-[#22A855]" />
                   <div className="text-[18px] font-black text-[#1A1A1A]">Round complete!</div>

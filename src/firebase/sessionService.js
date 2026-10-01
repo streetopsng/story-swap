@@ -300,7 +300,10 @@ export async function joinSession(sessionId, { email, name, avatar, dept = '', h
       (p) => !hostedSessionId || !p.hostedSessionId || p.hostedSessionId === hostedSessionId
     );
     mine = others.find((p) => p.id === participantId || (p.email || '').toLowerCase() === normalizedEmail) || null;
-    if (mine?.name && mine.status === 'joined') {
+    const base = name.trim().toLowerCase();
+    const prior = (mine?.name || '').trim().toLowerCase();
+    const isOwnVariant = prior === base || (prior.startsWith(`${base} `) && /^\d+$/.test(prior.slice(base.length + 1)));
+    if (mine?.name && mine.status === 'joined' && isOwnVariant) {
       finalName = mine.name;
     } else {
       const taken = (n) => others.some(

@@ -47,6 +47,8 @@ export default function HostLobby() {
       setSession(data);
       if (data.status === 'in-progress') {
         navigate(`/host/${sessionId}/control`);
+      } else if (data.status === 'completed') {
+        navigate(`/host/${sessionId}/finish`);
       }
     });
 
@@ -64,6 +66,8 @@ export default function HostLobby() {
   const queryInvited = queryParams.get('invitedCount');
   const joinedParticipants = participants.filter((p) => p.status === 'joined');
   const joinedCount = joinedParticipants.length;
+  const MIN_PARTICIPANTS = 2;
+  const canStart = joinedCount >= MIN_PARTICIPANTS;
   const targetInvited =
     session?.invitedCount ||
     ggSession?.invitedCount ||
@@ -129,8 +133,8 @@ export default function HostLobby() {
   };
 
   const handleStartGame = async () => {
-    if (joinedCount < 1) {
-      showToast('Wait for at least one player to join before starting');
+    if (!canStart) {
+      showToast(`Wait for at least ${MIN_PARTICIPANTS} participants to join before starting`);
       return;
     }
 
@@ -184,15 +188,15 @@ export default function HostLobby() {
               <Button
                 variant="orange"
                 onClick={handleStartGame}
-                disabled={isStarting || joinedCount === 0}
+                disabled={isStarting || !canStart}
                 className="py-4 text-base"
               >
                 {isStarting ? 'Starting...' : <>Start game <ChevronRightIcon className="w-4 h-4" /></>}
               </Button>
               <EndSessionButton sessionId={sessionId} variant="block" />
               <p className="text-[12px] text-[#999999] text-center leading-relaxed">
-                {joinedCount === 0
-                  ? 'Waiting for players to join via their GummyGum invite.'
+                {!canStart
+                  ? `Waiting for at least ${MIN_PARTICIPANTS} participants (${joinedCount} joined)`
                   : `${joinedCount} teammate${joinedCount === 1 ? '' : 's'} ready! Launch when everyone is assembled.`}
               </p>
             </section>
@@ -310,14 +314,14 @@ export default function HostLobby() {
           <Button
             variant="orange"
             onClick={handleStartGame}
-            disabled={isStarting || joinedCount === 0}
+            disabled={isStarting || !canStart}
           >
             {isStarting ? 'Starting...' : <>Start game <ChevronRightIcon className="w-4 h-4" /></>}
           </Button>
           <EndSessionButton sessionId={sessionId} variant="block" />
           <p className="text-[12px] text-[#999999] text-center leading-relaxed">
-            {joinedCount === 0
-              ? 'Waiting for players to join via their GummyGum invite.'
+            {!canStart
+              ? `Waiting for at least ${MIN_PARTICIPANTS} participants (${joinedCount} joined)`
               : `${joinedCount} joined · Ready to start whenever you want.`}
           </p>
         </footer>
