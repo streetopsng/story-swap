@@ -7,6 +7,7 @@ import {
   updateDoc as rawUpdateDoc,
   deleteDoc as rawDeleteDoc,
   onSnapshot as rawOnSnapshot,
+  runTransaction as rawRunTransaction,
 } from 'firebase/firestore';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getAnalytics, isSupported } from 'firebase/analytics';
@@ -81,6 +82,7 @@ export const getDocs = (...args) => authReady.then(() => rawGetDocs(...args));
 export const setDoc = (...args) => authReady.then(() => rawSetDoc(...args));
 export const updateDoc = (...args) => authReady.then(() => rawUpdateDoc(...args));
 export const deleteDoc = (...args) => authReady.then(() => rawDeleteDoc(...args));
+export const runTransaction = (...args) => authReady.then(() => rawRunTransaction(...args));
 
 export function onSnapshot(...args) {
   let unsubscribe = null;

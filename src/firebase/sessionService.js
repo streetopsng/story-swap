@@ -7,6 +7,7 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
+  runTransaction,
 } from './config';
 import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { buildSessionPrompts } from '../utils/questionBank';
@@ -535,4 +536,53 @@ export async function shareStory(sessionId, participantId, round, text) {
     `participants_${sessionId}`,
     list.map((p) => (p.id === participantId ? { ...p, stories: { ...(p.stories || {}), [round]: entry } } : p))
   );
+}
+
+export const TURN_SECONDS = 60;
+
+// Timeouts need no write: every device derives the same turn from the persisted startedAt.
+export function getGroupTurn(session, groupIndex, now) {
+  const round = session?.currentRound ?? 0;
+  const stored = session?.turnState?.[groupIndex];
+  const base = stored && stored.round === round
+    ? stored
+    : { index: 0, startedAt: session?.roundStartedAt || now };
+  const elapsedSec = Math.max(0, Math.floor((now - base.startedAt) / 1000));
+  return {
+    index: base.index + Math.floor(elapsedSec / TURN_SECONDS),
+    timeLeft: TURN_SECONDS - (elapsedSec % TURN_SECONDS),
+  };
+}
+
+// Ends a turn early (after Share). Only writes if the group is still on expectedIndex, so duplicate or late calls are no-ops.
+export async function completeGroupTurn(sessionId, groupIndex, round, expectedIndex) {
+  const next = (data) => {
+    if (!data || CLOSED_STATUSES.includes(data.status) || (data.currentRound ?? 0) !== round) return null;
+    if (getGroupTurn(data, groupIndex, Date.now()).index !== expectedIndex) return null;
+    return { round, index: expectedIndex + 1, startedAt: Date.now() };
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const ref = doc(db, 'sessions', sessionId);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(ref);
+        const entry = snap.exists() ? next(snap.data()) : null;
+        if (entry) tx.update(ref, { [`turnState.${groupIndex}`]: entry });
+      });
+      return;
+    } catch (error) {
+      console.error('Firestore completeGroupTurn error:', error);
+      return;
+    }
+  }
+
+  const session = getLocalStore(`session_${sessionId}`);
+  const entry = next(session);
+  if (entry) {
+    setLocalStore(`session_${sessionId}`, {
+      ...session,
+      turnState: { ...(session.turnState || {}), [groupIndex]: entry },
+    });
+  }
 }

@@ -39,7 +39,7 @@ export default function GameRulesModal({ onConfirm, name }) {
             <div className="text-left">
               <div className="text-[13px] font-black text-[#1A1A1A]">Write and share your story</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                Write a short answer to the prompt, share it, and read your group's stories as they come in.
+                Take turns: when it's yours, you have 60 seconds to write a short answer and share it. Then read your teammates' stories as they come in.
               </div>
             </div>
           </div>
