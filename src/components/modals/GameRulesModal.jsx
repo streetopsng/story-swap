@@ -37,9 +37,9 @@ export default function GameRulesModal({ onConfirm, name }) {
               2
             </div>
             <div className="text-left">
-              <div className="text-[13px] font-black text-[#1A1A1A]">Take turns sharing</div>
+              <div className="text-[13px] font-black text-[#1A1A1A]">Write and share your story</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                Everyone gets about a minute to share their story while the rest of the group listens.
+                Write a short answer to the prompt, share it, and read your group's stories as they come in.
               </div>
             </div>
           </div>
@@ -51,7 +51,7 @@ export default function GameRulesModal({ onConfirm, name }) {
             <div className="text-left">
               <div className="text-[13px] font-black text-[#1A1A1A]">New round, new group</div>
               <div className="text-[11.5px] text-[#666] mt-0.5 leading-snug">
-                The host starts each round and groups reshuffle, so you hear from different teammates.
+                The host starts each round and groups reshuffle, so you read stories from different teammates.
               </div>
             </div>
           </div>

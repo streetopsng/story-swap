@@ -10,16 +10,15 @@ import {
   subscribeSession,
   subscribeParticipants,
   joinSession,
-  setGroupTurn,
+  shareStory,
+  STORY_MAX_LENGTH,
   getSession,
   getParticipants,
 } from '../../firebase/sessionService';
 import { getGummyGumSession } from '../../lib/gummygumSession';
-import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, MicIcon, EarIcon, SparkleIcon, LockIcon } from '../common/Icons';
+import { ChatIcon, ChevronRightIcon, ArrowRightIcon, PaletteIcon, SpinnerIcon, CheckIcon, CheckCircleIcon, HourglassIcon, SparkleIcon, LockIcon } from '../common/Icons';
 import Avatar from '../common/Avatar';
 import { isAvatarId, randomAvatarId } from '../../lib/avatars';
-
-const TURN_SECONDS = 60;
 
 export default function PlayerJoinFlow() {
   const { sessionId } = useParams();
@@ -80,7 +79,10 @@ export default function PlayerJoinFlow() {
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  const [now, setNow] = useState(() => Date.now());
+  // Keyed by round so a new round starts with an empty, closed editor.
+  const [draftState, setDraftState] = useState({ round: -1, text: '' });
+  const [editingRound, setEditingRound] = useState(-1);
+  const [isSharing, setIsSharing] = useState(false);
 
   const rememberIdentity = (identity) => {
     localStorage.setItem(`story_swap_player_${sessionId}`, JSON.stringify(identity));
@@ -170,12 +172,9 @@ export default function PlayerJoinFlow() {
 
   const currentRoundIndex = session?.currentRound ?? 0;
 
-  useEffect(() => {
-    if (step !== 'round') return;
-    setNow(Date.now());
-    const interval = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(interval);
-  }, [step]);
+  const draft = draftState.round === currentRoundIndex ? draftState.text : '';
+  const setDraft = (text) => setDraftState({ round: currentRoundIndex, text });
+  const isEditingStory = editingRound === currentRoundIndex;
 
   // Save identity and join session in Firestore
   const handleSaveIdentity = async () => {
@@ -226,25 +225,34 @@ export default function PlayerJoinFlow() {
     )
   );
   const myGroup = foundGroup || [];
-  const myGroupIndex = foundGroup ? allGroups.indexOf(foundGroup) : 0;
 
-  // Turn clock derives from persisted timestamps so a refresh resumes mid-turn.
-  const storedTurn = session?.turnState?.[myGroupIndex];
-  const turnBase = storedTurn && storedTurn.round === currentRoundIndex
-    ? storedTurn
-    : { index: 0, startedAt: session?.roundStartedAt || now };
-  const turnElapsedSec = Math.max(0, Math.floor((now - turnBase.startedAt) / 1000));
-  const turnIndex = turnBase.index + Math.floor(turnElapsedSec / TURN_SECONDS);
-  const turnTimeLeft = TURN_SECONDS - (turnElapsedSec % TURN_SECONDS);
+  const findRecord = (m) => participants.find(
+    (p) => (m.id && p.id === m.id)
+      || (m.email && (p.email || '').toLowerCase() === m.email.toLowerCase())
+  );
+  const storyOf = (m) => findRecord(m)?.stories?.[currentRoundIndex]?.text || '';
+  const isMe = (m) =>
+    (m.email ? m.email.toLowerCase() === myEmail : Boolean(m.name) && m.name.toLowerCase() === myName);
 
-  const currentSpeaker = myGroup[turnIndex % (myGroup.length || 1)];
-  const isMyTurn =
-    currentSpeaker &&
-    ((currentSpeaker.email && currentSpeaker.email.toLowerCase() === email.toLowerCase()) ||
-      (currentSpeaker.name && currentSpeaker.name.toLowerCase() === name.toLowerCase()));
+  const myRecord = participants.find(
+    (p) => myEmail && (p.id === myEmail || (p.email || '').toLowerCase() === myEmail)
+  ) || participants.find((p) => p.status === 'joined' && (p.name || '').trim().toLowerCase() === myName);
+  const myStory = myRecord?.stories?.[currentRoundIndex]?.text || '';
+  const showStoryForm = !myStory || isEditingStory;
+  const groupmates = myGroup.filter((m) => !isMe(m));
 
-  const handleFinishMyTurn = () => {
-    setGroupTurn(sessionId, myGroupIndex, currentRoundIndex, turnIndex + 1).catch(() => {});
+  const handleShareStory = async () => {
+    const text = draft.trim();
+    if (!text || !myRecord?.id) return;
+    setIsSharing(true);
+    try {
+      await shareStory(sessionId, myRecord.id, currentRoundIndex, text);
+      setEditingRound(-1);
+    } catch {
+      showToast('Could not share. Please try again.');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const totalRounds = session?.prompts?.length || session?.roundCount || 3;
@@ -275,7 +283,7 @@ export default function PlayerJoinFlow() {
                 </h1>
                 <p className="text-[13px] md:text-[15px] text-[#555555] mt-3 md:mt-4 leading-relaxed max-w-md mx-auto">
                   Session: <strong className="text-[#1A1A1A]">{session?.name || 'Team Bonding'}</strong><br />
-                  Small-group conversations guided by a prompt each round. Just share and listen.
+                  Small groups, one prompt each round. Write your story and read your teammates'.
                 </p>
               </section>
             </div>
@@ -568,61 +576,120 @@ export default function PlayerJoinFlow() {
                 </div>
               </section>
 
-              {/* Turn Card */}
+              {/* Story Card */}
               {!foundGroup ? (
                 <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
-                  <EarIcon className="w-10 h-10 mx-auto mb-2 text-[#555]" />
+                  <HourglassIcon className="w-10 h-10 mx-auto mb-2 text-[#555]" />
                   <div className="text-[18px] font-black text-[#1A1A1A]">You joined mid-round</div>
                   <div className="text-[13px] text-[#555555] mt-1">
                     You'll be placed in a group when the host starts the next round.
                   </div>
                 </section>
-              ) : turnIndex >= myGroup.length && myGroup.length > 0 ? (
-                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 text-center shadow-sm md:shadow-none">
-                  <CheckCircleIcon className="w-10 h-10 mx-auto mb-2 text-[#22A855]" />
-                  <div className="text-[18px] font-black text-[#1A1A1A]">Round complete!</div>
-                  <div className="text-[13px] text-[#555555] mt-1">
-                    Waiting for the host to start the next round...
-                  </div>
-                </section>
-              ) : isMyTurn ? (
-                <section className="bg-[#FDE8D0] border-2 border-[#F5821F] rounded-[24px] p-6 md:p-8 text-center shadow-sm">
-                  <MicIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 text-[#F5821F]" />
-                  <div className="text-[20px] md:text-[22px] font-black text-[#1A1A1A]">Your turn!</div>
-                  <div className="text-[13px] md:text-[14px] text-[#555555] mt-1">
-                    Share your answer with the group
-                  </div>
-                  <div className="text-[32px] md:text-[40px] font-black text-[#E8710A] mt-3">
-                    0:{String(turnTimeLeft).padStart(2, '0')}
-                  </div>
-                  <Button
-                    variant="dark"
-                    onClick={handleFinishMyTurn}
-                    className="mt-5 py-3.5"
-                  >
-                    I'm done sharing <ChevronRightIcon className="w-4 h-4" />
-                  </Button>
-                </section>
               ) : (
-                <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-6 md:p-8 text-center shadow-sm md:shadow-none">
-                  <EarIcon className="w-10 h-10 md:w-12 md:h-12 mx-auto mb-2 text-[#555]" />
-                  <div className="text-[19px] md:text-[21px] font-black text-[#1A1A1A]">
-                    It's {currentSpeaker?.name || 'teammate'}'s turn
-                  </div>
-                  <div className="text-[13px] md:text-[14px] text-[#555555] mt-1">
-                    Listen while they share
-                  </div>
-                  <div className="text-[32px] md:text-[40px] font-black text-[#E8710A] mt-3">
-                    0:{String(turnTimeLeft).padStart(2, '0')}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleFinishMyTurn}
-                    className="text-xs text-[#999999] hover:text-[#555555] underline cursor-pointer mt-4"
-                  >
-                    <span className="inline-flex items-center gap-1">Next speaker <ChevronRightIcon className="w-3 h-3" /></span>
-                  </button>
-                </section>
+                <>
+                  {showStoryForm ? (
+                    <section className="bg-[#FDE8D0] border-2 border-[#F5821F] rounded-[24px] p-5 md:p-6 shadow-sm">
+                      <label htmlFor="story-input" className="block text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#E8710A] mb-2">
+                        Your story
+                      </label>
+                      <textarea
+                        id="story-input"
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value.slice(0, STORY_MAX_LENGTH))}
+                        maxLength={STORY_MAX_LENGTH}
+                        rows={5}
+                        placeholder="Write your answer for your group..."
+                        className="w-full resize-none bg-white border-[1.5px] border-[#E0DBD4] focus:border-[#F5821F] outline-none rounded-[14px] px-3.5 py-3 text-base text-[#1A1A1A] font-sans leading-relaxed"
+                      />
+                      <div className="flex items-center justify-between mt-1.5 text-[11px] font-bold text-[#999999]">
+                        <span>{myStory ? 'Editing your shared story' : 'Your group will see this'}</span>
+                        <span>{draft.length}/{STORY_MAX_LENGTH}</span>
+                      </div>
+                      <Button
+                        variant="dark"
+                        onClick={handleShareStory}
+                        disabled={!draft.trim() || isSharing || !myRecord}
+                        className="mt-4 py-3.5"
+                      >
+                        {isSharing ? 'Sharing...' : <>{myStory ? 'Update story' : 'Share'} <ChevronRightIcon className="w-4 h-4" /></>}
+                      </Button>
+                      {myStory && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingRound(-1)}
+                          className="block mx-auto text-xs text-[#999999] hover:text-[#555555] underline cursor-pointer mt-3"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </section>
+                  ) : (
+                    <section className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[24px] p-5 md:p-6 shadow-sm md:shadow-none">
+                      <div className="flex items-center gap-2.5 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                          <Avatar id={avatar} className="w-full h-full" />
+                        </div>
+                        <div className="flex-1 min-w-0 text-[13px] font-extrabold text-[#1A1A1A] truncate">{name} (You)</div>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#22A855]">
+                          <CheckCircleIcon className="w-4 h-4" /> Shared
+                        </span>
+                      </div>
+                      <p className="text-[14px] text-[#1A1A1A] leading-relaxed whitespace-pre-wrap break-words">{myStory}</p>
+                      <button
+                        type="button"
+                        onClick={() => { setDraft(myStory); setEditingRound(currentRoundIndex); }}
+                        className="text-xs text-[#999999] hover:text-[#555555] underline cursor-pointer mt-3"
+                      >
+                        Edit my story
+                      </button>
+                    </section>
+                  )}
+
+                  {groupmates.length > 0 && (
+                    <section className="space-y-2.5">
+                      <div className="text-[11px] md:text-[12px] font-extrabold tracking-wider uppercase text-[#555555] px-1">
+                        Your group's stories
+                      </div>
+                      {groupmates.map((m) => {
+                        const record = findRecord(m);
+                        const memberName = record?.name || m.name || 'Teammate';
+                        const story = storyOf(m);
+                        return (
+                          <div
+                            key={m.id || m.email || m.name}
+                            className="bg-white md:bg-[#FAF7F2] border-[1.5px] border-[#E0DBD4] rounded-[20px] p-4 shadow-sm md:shadow-none"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-[#FDE8D0] border-[1.5px] border-[#F5821F] overflow-hidden shrink-0">
+                                <Avatar id={record?.av || m.av} className="w-full h-full" />
+                              </div>
+                              <div className="flex-1 min-w-0 text-[13px] font-extrabold text-[#1A1A1A] truncate">
+                                {memberName}
+                              </div>
+                            </div>
+                            {story ? (
+                              <p className="text-[14px] text-[#1A1A1A] leading-relaxed whitespace-pre-wrap break-words mt-2">{story}</p>
+                            ) : (
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="w-2 h-2 rounded-full bg-[#F5821F] animate-blink" />
+                                <span className="text-[13px] text-[#999999] font-semibold">
+                                  Waiting for {memberName} to share...
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </section>
+                  )}
+
+                  {myStory && groupmates.every((m) => storyOf(m)) && (
+                    <div className="flex items-center justify-center gap-2 py-1 text-[13px] text-[#555555] font-semibold text-center">
+                      <CheckCircleIcon className="w-4 h-4 text-[#22A855] shrink-0" />
+                      Everyone has shared. Waiting for the host to continue...
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

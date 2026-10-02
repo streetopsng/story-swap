@@ -143,24 +143,6 @@ export function PaletteIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
-export function MicIcon({ className = 'w-8 h-8' }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6" />
-    </svg>
-  );
-}
-
-export function EarIcon({ className = 'w-8 h-8' }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 4a6 6 0 0 0-6 6v6.5a2.5 2.5 0 0 0 5 0V13" />
-      <path d="M15 4a6 6 0 0 1 6 6c0 3-2 4-2 6.5a3.5 3.5 0 0 1-7 0" />
-    </svg>
-  );
-}
-
 export function ChevronRightIcon({ className = 'w-4 h-4' }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
