@@ -128,7 +128,6 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
     if (routedRef.current) return;
     const isFreshLaunch = new URLSearchParams(window.location.search).has('ggt');
     resolveGummyGumLaunch().then(async (session) => {
-      setGgSessionState(session);
       if (routedRef.current) return;
       const params = new URLSearchParams(window.location.search);
       const code = session?.roomCode || params.get('pin') || params.get('sessionId') || params.get('code') || params.get('room');
@@ -242,6 +241,10 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
           const search = window.location.search;
           navigate(`/join/${code}${search}`, { replace: true });
         }
+        // Revealed only after routing, so the standalone create screen at "/" never flashes.
+        setGgSessionState(session);
+      } else {
+        setGgSessionState(session);
       }
     });
   }, [navigate, location, setGgSessionState, setGgCancelled, setGgExpired]);
