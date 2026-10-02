@@ -1,15 +1,14 @@
-import { db, isFirebaseConfigured } from './config';
 import {
-  collection,
-  doc,
+  db,
+  isFirebaseConfigured,
   getDoc,
   getDocs,
   setDoc,
   updateDoc,
   deleteDoc,
   onSnapshot,
-  serverTimestamp,
-} from 'firebase/firestore';
+} from './config';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import { buildSessionPrompts } from '../utils/questionBank';
 import { buildGroups } from '../utils/grouping';
 
