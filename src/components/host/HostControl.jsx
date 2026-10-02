@@ -8,7 +8,7 @@ import {
   subscribeParticipants,
   advanceRound,
 } from '../../firebase/sessionService';
-import { ClockIcon, ChevronRightIcon } from '../common/Icons';
+import { ClockIcon, ChevronRightIcon, CheckCircleIcon } from '../common/Icons';
 import Avatar from '../common/Avatar';
 
 export default function HostControl() {
@@ -73,6 +73,12 @@ export default function HostControl() {
   };
   const isLastRound = currentRoundIndex >= totalRounds - 1;
 
+  const storyOf = (m) => participants.find(
+    (p) => (m.id && p.id === m.id) || (m.email && (p.email || '').toLowerCase() === m.email.toLowerCase())
+  )?.stories?.[currentRoundIndex]?.text || '';
+  const memberCount = (session?.groups || []).reduce((n, g) => n + g.length, 0);
+  const sharedCount = (session?.groups || []).reduce((n, g) => n + g.filter((m) => storyOf(m)).length, 0);
+
   const handleNextRound = async () => {
     setIsAdvancing(true);
     try {
@@ -136,8 +142,8 @@ export default function HostControl() {
             <div className="text-[11px] md:text-[13px] font-extrabold tracking-wider uppercase text-[#555555]">
               Breakout Groups This Round ({session?.groups?.length || 0})
             </div>
-            <div className="text-xs text-[#999999] hidden md:block">
-              Each group discusses the prompt in their own conversation
+            <div className="text-[11px] md:text-xs font-bold text-[#555555]">
+              {sharedCount}/{memberCount} stories shared
             </div>
           </div>
 
@@ -154,24 +160,38 @@ export default function HostControl() {
                 >
                   <div className="text-[11px] font-extrabold text-[#999999] uppercase tracking-wider mb-3 flex items-center justify-between">
                     <span>Group {groupIdx + 1}</span>
-                    <span className="text-[10px] bg-[#FAF7F2] border border-[#E0DBD4] px-2 py-0.5 rounded-full font-bold">
-                      {group.length} members
+                    <span className={`text-[10px] border px-2 py-0.5 rounded-full font-bold ${
+                      group.every((m) => storyOf(m))
+                        ? 'bg-[#E6F6EC] border-[#22A855] text-[#22A855]'
+                        : 'bg-[#FAF7F2] border-[#E0DBD4]'
+                    }`}>
+                      {group.filter((m) => storyOf(m)).length}/{group.length} shared
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {group.map((member) => (
-                      <div
-                        key={member.id || member.email || member.name}
-                        className="flex items-center gap-2 bg-[#FDE8D0] border border-[#F5821F] rounded-full py-1.5 pl-1.5 pr-3.5 text-[13px] font-bold text-[#1A1A1A]"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-white overflow-hidden shrink-0">
-                          <Avatar id={member.av} className="w-full h-full" />
+                  <div className="space-y-2">
+                    {group.map((member) => {
+                      const story = storyOf(member);
+                      return (
+                        <div key={member.id || member.email || member.name}>
+                          <div className="flex items-center gap-2 text-[13px] font-bold text-[#1A1A1A]">
+                            <div className={`w-6 h-6 rounded-full bg-white overflow-hidden shrink-0 border-[1.5px] ${story ? 'border-[#22A855]' : 'border-[#E0DBD4]'}`}>
+                              <Avatar id={member.av} className="w-full h-full" />
+                            </div>
+                            <span className="flex-1 min-w-0 truncate">{member.name || member.email}</span>
+                            {story ? (
+                              <CheckCircleIcon className="w-4 h-4 text-[#22A855] shrink-0" />
+                            ) : (
+                              <span className="text-[11px] font-semibold text-[#999999] shrink-0">Writing...</span>
+                            )}
+                          </div>
+                          {story && (
+                            <p className="mt-1 ml-8 text-[12px] text-[#555555] leading-snug whitespace-pre-wrap break-words line-clamp-4">
+                              {story}
+                            </p>
+                          )}
                         </div>
-                        <span className="truncate max-w-[130px]">
-                          {member.name || member.email}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))
@@ -182,7 +202,7 @@ export default function HostControl() {
         {/* Host Action Bar */}
         <footer className="pt-2 bg-[#EDEAE4] shrink-0 max-w-md mx-auto w-full md:max-w-none md:flex md:items-center md:justify-between md:pt-4">
           <div className="hidden md:block text-xs text-[#999999]">
-            Advance when conversations have reached natural completion.
+            Advance once groups have shared their stories.
           </div>
           <Button
             variant="orange"

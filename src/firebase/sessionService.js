@@ -511,27 +511,28 @@ export function markSessionAbandoned(sessionId) {
   return patchSession(sessionId, { status: 'expired', abandoned: true, updatedAt: Date.now() });
 }
 
-/**
- * Persist a group's current speaker so the turn clock survives refreshes and
- * stays shared across the group's devices.
- */
-export async function setGroupTurn(sessionId, groupIndex, round, index) {
-  if (await isSessionClosed(sessionId)) return;
-  const entry = { round, index, startedAt: Date.now() };
+export const STORY_MAX_LENGTH = 500;
+
+// Stories live on the participant doc as stories.{round} so they ride the existing participants subscription and rules.
+export async function shareStory(sessionId, participantId, round, text) {
+  if (!participantId || await isSessionClosed(sessionId)) return;
+  const entry = { text: String(text || '').trim().slice(0, STORY_MAX_LENGTH), sharedAt: Date.now() };
+  if (!entry.text) return;
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'sessions', sessionId), { [`turnState.${groupIndex}`]: entry });
+      await updateDoc(doc(db, 'sessions', sessionId, 'participants', participantId), {
+        [`stories.${Number(round) || 0}`]: entry,
+      });
       return;
     } catch (error) {
-      console.error('Firestore setGroupTurn error:', error);
+      console.error('Firestore shareStory error:', error);
+      throw error;
     }
   }
 
-  const session = getLocalStore(`session_${sessionId}`);
-  if (session) {
-    setLocalStore(`session_${sessionId}`, {
-      ...session,
-      turnState: { ...(session.turnState || {}), [groupIndex]: entry },
-    });
-  }
+  const list = getLocalStore(`participants_${sessionId}`, []);
+  setLocalStore(
+    `participants_${sessionId}`,
+    list.map((p) => (p.id === participantId ? { ...p, stories: { ...(p.stories || {}), [round]: entry } } : p))
+  );
 }
