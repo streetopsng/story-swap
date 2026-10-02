@@ -55,6 +55,22 @@ export function generateSessionId() {
   return id;
 }
 
+// Firestore rejects nested arrays, so groups are stored as [{ members: [...] }] and unwrapped on read.
+const forFirestore = (updates) =>
+  Array.isArray(updates.groups)
+    ? {
+        ...updates,
+        groups: updates.groups.map((members) => ({
+          members: members.map((m) => Object.fromEntries(Object.entries(m).filter(([, v]) => v !== undefined))),
+        })),
+      }
+    : updates;
+
+const withGroups = (data) =>
+  data && Array.isArray(data.groups)
+    ? { ...data, groups: data.groups.map((g) => (Array.isArray(g) ? g : g?.members || [])) }
+    : data;
+
 /**
  * Get existing session details once
  */
@@ -64,7 +80,7 @@ export async function getSession(sessionId) {
       const sessionRef = doc(db, 'sessions', sessionId);
       const snap = await getDoc(sessionRef);
       if (snap.exists()) {
-        return { id: snap.id, ...snap.data() };
+        return withGroups({ id: snap.id, ...snap.data() });
       }
       return null;
     } catch {
@@ -187,7 +203,7 @@ export function subscribeSession(sessionId, callback) {
       const sessionRef = doc(db, 'sessions', sessionId);
       const unsubscribe = onSnapshot(sessionRef, snapshot => {
         if (snapshot.exists()) {
-          callback({ id: snapshot.id, ...snapshot.data() });
+          callback(withGroups({ id: snapshot.id, ...snapshot.data() }));
         } else {
           callback(null);
         }
@@ -371,7 +387,7 @@ export async function startSession(sessionId, participants) {
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', sessionId);
-      await updateDoc(sessionRef, updates);
+      await updateDoc(sessionRef, forFirestore(updates));
       return;
     } catch (error) {
       console.error('Firestore startSession error:', error);
@@ -400,7 +416,7 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
       updatedAt: Date.now(),
     };
     if (isFirebaseConfigured && db) {
-      await updateDoc(doc(db, 'sessions', sessionId), updates);
+      await updateDoc(doc(db, 'sessions', sessionId), forFirestore(updates));
     } else {
       const session = getLocalStore(`session_${sessionId}`);
       if (session) setLocalStore(`session_${sessionId}`, { ...session, ...updates });
@@ -420,7 +436,7 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', sessionId);
-      await updateDoc(sessionRef, updates);
+      await updateDoc(sessionRef, forFirestore(updates));
       return;
     } catch (error) {
       console.error('Firestore advanceRound error:', error);
@@ -448,7 +464,7 @@ export async function endSession(sessionId, { completed = false } = {}) {
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', sessionId);
-      await updateDoc(sessionRef, updates);
+      await updateDoc(sessionRef, forFirestore(updates));
       return;
     } catch (error) {
       console.error('Firestore endSession error:', error);
@@ -465,7 +481,7 @@ export async function endSession(sessionId, { completed = false } = {}) {
 async function patchSession(sessionId, updates) {
   if (isFirebaseConfigured && db) {
     try {
-      await updateDoc(doc(db, 'sessions', sessionId), updates);
+      await updateDoc(doc(db, 'sessions', sessionId), forFirestore(updates));
       return;
     } catch (error) {
       console.error('Firestore patchSession error:', error);
