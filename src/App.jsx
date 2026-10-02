@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import HostHome from './components/host/HostHome';
-import HostSetup from './components/host/HostSetup';
 import HostLobby from './components/host/HostLobby';
 import HostControl from './components/host/HostControl';
 import HostFinish from './components/host/HostFinish';
@@ -278,8 +276,8 @@ export default function App() {
         ) : (
           <Routes>
             {/* Host Routes */}
-            <Route path="/" element={<HostHome />} />
-            <Route path="/host/setup" element={<HostSetup />} />
+            {/* Story Swap only runs from a GummyGum launch, which routes to a lobby or join screen. */}
+            <Route path="/" element={ggSession.roomCode ? <LoadingScreen message="Connecting to GummyGum..." /> : <GummyGumLockedScreen />} />
             <Route path="/host/:sessionId/lobby" element={<HostLobby />} />
             <Route path="/host/:sessionId/control" element={<HostControl />} />
             <Route path="/host/:sessionId/finish" element={<HostFinish />} />
