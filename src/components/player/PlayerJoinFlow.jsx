@@ -9,6 +9,7 @@ import GameRulesModal from '../modals/GameRulesModal';
 import {
   subscribeSession,
   subscribeParticipants,
+  subscribeParticipantDocs,
   joinSession,
   shareStory,
   completeGroupTurn,
@@ -164,13 +165,8 @@ export default function PlayerJoinFlow() {
       }
     });
 
-    const unsubParts = subscribeParticipants(sessionId, (list) => {
-      setParticipants(list);
-    });
-
     return () => {
       unsubSession?.();
-      unsubParts?.();
     };
   }, [sessionId]);
 
@@ -251,6 +247,23 @@ export default function PlayerJoinFlow() {
   ) || participants.find((p) => p.status === 'joined' && (p.name || '').trim().toLowerCase() === myName);
   const myStory = myRecord?.stories?.[currentRoundIndex]?.text || '';
   const nameOf = (m) => findRecord(m)?.name || m?.name || 'Teammate';
+
+  // The lobby lists everyone; once the game runs a player only follows its own group's records for the round.
+  const myId = (foundGroup && myGroup.find(isMe)?.id) || myEmail;
+  const sessionStatus = session?.status;
+  const watchKey =
+    sessionStatus === 'lobby' && step === 'lobby'
+      ? 'all'
+      : sessionStatus === 'in-progress' && step === 'round'
+        ? JSON.stringify([...new Set([...myGroup.map((m) => m.id || (m.email || '').toLowerCase()), myId].filter(Boolean))].sort())
+        : '';
+  useEffect(() => {
+    if (!sessionId || !watchKey) return;
+    const unsub = watchKey === 'all'
+      ? subscribeParticipants(sessionId, setParticipants)
+      : subscribeParticipantDocs(sessionId, JSON.parse(watchKey), setParticipants);
+    return () => unsub?.();
+  }, [sessionId, watchKey]);
 
   const { index: turnIndex, timeLeft: turnTimeLeft } = getGroupTurn(session, myGroupIndex, now);
   const groupDone = myGroup.length > 0 && turnIndex >= myGroup.length;

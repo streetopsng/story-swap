@@ -57,12 +57,15 @@ export function generateSessionId() {
 }
 
 // Firestore rejects nested arrays, so groups are stored as [{ members: [...] }] and unwrapped on read.
+// Stories stay on the participant docs: copied into groups, every player would download everyone's.
 const forFirestore = (updates) =>
   Array.isArray(updates.groups)
     ? {
         ...updates,
         groups: updates.groups.map((members) => ({
-          members: members.map((m) => Object.fromEntries(Object.entries(m).filter(([, v]) => v !== undefined))),
+          members: members.map((m) =>
+            Object.fromEntries(Object.entries(m).filter(([k, v]) => v !== undefined && k !== 'stories'))
+          ),
         })),
       }
     : updates;
@@ -322,6 +325,23 @@ export function subscribeParticipants(sessionId, callback) {
     }
     window.removeEventListener('storage', handleStorage);
   };
+}
+
+// One listener per named participant doc, so a player only receives its own group's records and stories.
+export function subscribeParticipantDocs(sessionId, ids, callback) {
+  const wanted = [...new Set(ids.filter(Boolean))];
+  if (isFirebaseConfigured && db) {
+    const records = new Map();
+    const unsubs = wanted.map((id) =>
+      onSnapshot(doc(db, 'sessions', sessionId, 'participants', id), (snap) => {
+        if (snap.exists()) records.set(id, { id: snap.id, ...snap.data() });
+        else records.delete(id);
+        callback(wanted.map((w) => records.get(w)).filter(Boolean));
+      })
+    );
+    return () => unsubs.forEach((unsub) => unsub());
+  }
+  return subscribeParticipants(sessionId, (list) => callback(list.filter((p) => wanted.includes(p.id))));
 }
 
 /**
