@@ -72,19 +72,40 @@ const withGroups = (data) =>
     ? { ...data, groups: data.groups.map((g) => (Array.isArray(g) ? g : g?.members || [])) }
     : data;
 
+const ATTEMPTS = 5;
+const RETRY_DELAY_MS = 1000;
+
+// Live writes are retried and then thrown; the local store is only for running without Firebase.
+async function withRetry(label, run) {
+  let lastError = null;
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    try {
+      return await run(attempt);
+    } catch (error) {
+      lastError = error;
+      console.error(`Firestore ${label} error (attempt ${attempt + 1}):`, error);
+      if (error?.code === 'permission-denied' || error?.code === 'not-found') break;
+      if (attempt < ATTEMPTS - 1) await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
+  }
+  throw lastError;
+}
+
 /**
- * Get existing session details once
+ * Get existing session details once.
+ * strict rethrows a failed read, for callers that must not mistake it for a missing room.
  */
-export async function getSession(sessionId) {
+export async function getSession(sessionId, { strict = false } = {}) {
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', sessionId);
-      const snap = await getDoc(sessionRef);
+      const snap = strict ? await withRetry('getSession', () => getDoc(sessionRef)) : await getDoc(sessionRef);
       if (snap.exists()) {
         return withGroups({ id: snap.id, ...snap.data() });
       }
       return null;
-    } catch {
+    } catch (error) {
+      if (strict) throw error;
       return null;
     }
   }
@@ -152,38 +173,41 @@ export async function createSession({
   }));
 
   if (isFirebaseConfigured && db) {
-    try {
-      const sessionRef = doc(db, 'sessions', sessionId);
+    const sessionRef = doc(db, 'sessions', sessionId);
+    await withRetry('createSession', async (attempt) => {
+      if (attempt > 0 && hostedSessionId) {
+        // An earlier attempt may have landed; rewriting it would reset a room people are already in.
+        const snap = await getDoc(sessionRef);
+        if (snap.exists() && snap.data().hostedSessionId === hostedSessionId) return;
+      }
       await setDoc(sessionRef, {
         ...sessionData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+    });
 
-      // A reused PIN keeps the earlier room's participants subcollection; drop anyone not joined to this room.
-      if (hostedSessionId) {
-        try {
-          const existingParts = await getDocs(collection(db, 'sessions', sessionId, 'participants'));
-          await Promise.all(
-            existingParts.docs
-              .filter((d) => d.data().hostedSessionId !== hostedSessionId)
-              .map((d) => deleteDoc(d.ref))
-          );
-        } catch (error) {
-          console.error('Firestore stale participant cleanup error:', error);
-        }
+    // A reused PIN keeps the earlier room's participants subcollection; drop anyone not joined to this room.
+    if (hostedSessionId) {
+      try {
+        const existingParts = await getDocs(collection(db, 'sessions', sessionId, 'participants'));
+        await Promise.all(
+          existingParts.docs
+            .filter((d) => d.data().hostedSessionId !== hostedSessionId)
+            .map((d) => deleteDoc(d.ref))
+        );
+      } catch (error) {
+        console.error('Firestore stale participant cleanup error:', error);
       }
-
-      // Write initial participants if any were invited
-      for (const p of initialParticipants) {
-        const pRef = doc(db, 'sessions', sessionId, 'participants', p.id);
-        await setDoc(pRef, p);
-      }
-
-      return sessionId;
-    } catch (error) {
-      console.error('Firestore createSession error, falling back to local sync:', error);
     }
+
+    // Write initial participants if any were invited
+    for (const p of initialParticipants) {
+      const pRef = doc(db, 'sessions', sessionId, 'participants', p.id);
+      await withRetry('createSession participant', () => setDoc(pRef, p));
+    }
+
+    return sessionId;
   }
 
   // Local fallback
@@ -342,13 +366,9 @@ export async function joinSession(sessionId, { email, name, avatar, dept = '', h
   };
 
   if (isFirebaseConfigured && db) {
-    try {
-      const pRef = doc(db, 'sessions', sessionId, 'participants', participantId);
-      await setDoc(pRef, participantData, { merge: true });
-      return participantData;
-    } catch (error) {
-      console.error('Firestore joinSession error:', error);
-    }
+    const pRef = doc(db, 'sessions', sessionId, 'participants', participantId);
+    await withRetry('joinSession', () => setDoc(pRef, participantData, { merge: true }));
+    return participantData;
   }
 
   // Local fallback
@@ -386,13 +406,13 @@ export async function startSession(sessionId, participants) {
   };
 
   if (isFirebaseConfigured && db) {
-    try {
-      const sessionRef = doc(db, 'sessions', sessionId);
+    const sessionRef = doc(db, 'sessions', sessionId);
+    await withRetry('startSession', async (attempt) => {
+      // A late retry must not regroup a game that already started.
+      if (attempt > 0 && (await getDoc(sessionRef)).data()?.status !== 'lobby') return;
       await updateDoc(sessionRef, forFirestore(updates));
-      return;
-    } catch (error) {
-      console.error('Firestore startSession error:', error);
-    }
+    });
+    return;
   }
 
   // Local fallback
@@ -417,7 +437,7 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
       updatedAt: Date.now(),
     };
     if (isFirebaseConfigured && db) {
-      await updateDoc(doc(db, 'sessions', sessionId), forFirestore(updates));
+      await withRetry('advanceRound', () => updateDoc(doc(db, 'sessions', sessionId), forFirestore(updates)));
     } else {
       const session = getLocalStore(`session_${sessionId}`);
       if (session) setLocalStore(`session_${sessionId}`, { ...session, ...updates });
@@ -435,13 +455,13 @@ export async function advanceRound(sessionId, participants, currentRound, totalR
   };
 
   if (isFirebaseConfigured && db) {
-    try {
-      const sessionRef = doc(db, 'sessions', sessionId);
+    const sessionRef = doc(db, 'sessions', sessionId);
+    await withRetry('advanceRound', async (attempt) => {
+      // A late retry must not skip a round or reshuffle one already under way.
+      if (attempt > 0 && ((await getDoc(sessionRef)).data()?.currentRound ?? 0) !== currentRound) return;
       await updateDoc(sessionRef, forFirestore(updates));
-      return;
-    } catch (error) {
-      console.error('Firestore advanceRound error:', error);
-    }
+    });
+    return;
   }
 
   // Local fallback
@@ -463,13 +483,9 @@ export async function endSession(sessionId, { completed = false } = {}) {
   };
 
   if (isFirebaseConfigured && db) {
-    try {
-      const sessionRef = doc(db, 'sessions', sessionId);
-      await updateDoc(sessionRef, forFirestore(updates));
-      return;
-    } catch (error) {
-      console.error('Firestore endSession error:', error);
-    }
+    const sessionRef = doc(db, 'sessions', sessionId);
+    await withRetry('endSession', () => updateDoc(sessionRef, forFirestore(updates)));
+    return;
   }
 
   const session = getLocalStore(`session_${sessionId}`);
@@ -496,7 +512,7 @@ async function patchSession(sessionId, updates) {
 }
 
 /**
- * Heartbeat from any connected client, used to tell an abandoned in-progress
+ * Heartbeat from the host, used to tell an abandoned in-progress
  * session apart from a long-running live one.
  */
 export function touchSessionActivity(sessionId) {
@@ -520,15 +536,12 @@ export async function shareStory(sessionId, participantId, round, text) {
   const entry = { text: String(text || '').trim().slice(0, STORY_MAX_LENGTH), sharedAt: Date.now() };
   if (!entry.text) return;
   if (isFirebaseConfigured && db) {
-    try {
-      await updateDoc(doc(db, 'sessions', sessionId, 'participants', participantId), {
+    await withRetry('shareStory', () =>
+      updateDoc(doc(db, 'sessions', sessionId, 'participants', participantId), {
         [`stories.${Number(round) || 0}`]: entry,
-      });
-      return;
-    } catch (error) {
-      console.error('Firestore shareStory error:', error);
-      throw error;
-    }
+      })
+    );
+    return;
   }
 
   const list = getLocalStore(`participants_${sessionId}`, []);
@@ -563,18 +576,16 @@ export async function completeGroupTurn(sessionId, groupIndex, round, expectedIn
   };
 
   if (isFirebaseConfigured && db) {
-    try {
-      const ref = doc(db, 'sessions', sessionId);
-      await runTransaction(db, async (tx) => {
+    const ref = doc(db, 'sessions', sessionId);
+    // Several devices race this transaction; the expectedIndex check makes a retry after a lost race a no-op.
+    await withRetry('completeGroupTurn', () =>
+      runTransaction(db, async (tx) => {
         const snap = await tx.get(ref);
         const entry = snap.exists() ? next(snap.data()) : null;
         if (entry) tx.update(ref, { [`turnState.${groupIndex}`]: entry });
-      });
-      return;
-    } catch (error) {
-      console.error('Firestore completeGroupTurn error:', error);
-      return;
-    }
+      })
+    ).catch(() => {});
+    return;
   }
 
   const session = getLocalStore(`session_${sessionId}`);

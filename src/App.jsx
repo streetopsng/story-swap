@@ -72,6 +72,23 @@ const GummyGumCancelledScreen = ({ isHost = false, completed = false }) => (
   </div>
 );
 
+const LaunchFailedScreen = () => (
+  <div className="min-h-screen w-full bg-[#EDEAE4] text-[#1A1A1A] flex items-center justify-center p-6">
+    <div className="max-w-md w-full p-8 text-center space-y-4 bg-white border-[1.5px] border-[#E0DBD4] rounded-[24px] shadow-sm">
+      <h1 className="text-2xl font-black text-[#1A1A1A]">We couldn't reach the server</h1>
+      <p className="text-[#555] text-sm leading-relaxed">
+        Your session hasn't been changed. Check your connection, then reload to try again.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="inline-block mt-3 px-6 py-3 rounded-xl bg-[#F5821F] text-[#1A1A1A] font-extrabold hover:bg-[#E07212] transition-colors shadow-sm cursor-pointer"
+      >
+        Reload
+      </button>
+    </div>
+  </div>
+);
+
 // Hours, not the lobby's 20 min: a round can legitimately run long, but an
 // in-progress session with no connected client this long is abandoned.
 const ABANDON_THRESHOLD_MS = 3 * 60 * 60 * 1000;
@@ -117,7 +134,7 @@ const isFromEarlierRoom = (sess, hostedSessionId) => {
   return sess.status === 'completed' || CLOSED_STATUSES.includes(sess.status) || isIdleLobby(sess);
 };
 
-function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
+function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired, setLaunchFailed }) {
   const navigate = useNavigate();
   const location = useLocation();
   const routedRef = useRef(false);
@@ -143,9 +160,12 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
 
         let existing = null;
         try {
-          existing = await getSession(code);
+          existing = await getSession(code, { strict: isHost });
         } catch (err) {
           console.error('Session lookup failed:', err);
+          // For the host a failed read must not look like "no room", or the room in progress gets recreated.
+          setLaunchFailed(true);
+          return;
         }
 
         if (isHost) {
@@ -169,6 +189,8 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
             }
           } catch (err) {
             console.error('Auto session ensure failed:', err);
+            setLaunchFailed(true);
+            return;
           }
         }
 
@@ -179,8 +201,9 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
         }
 
         let latestStatus = null;
+        // Host only: every player writing the session doc collided with the turn transactions on it.
         setInterval(() => {
-          if (latestStatus === 'in-progress') touchSessionActivity(code);
+          if (isHost && latestStatus === 'in-progress') touchSessionActivity(code);
         }, HEARTBEAT_INTERVAL_MS);
 
         let seenDoc = false;
@@ -245,7 +268,7 @@ function AppCoordinator({ setGgSessionState, setGgCancelled, setGgExpired }) {
         setGgSessionState(session);
       }
     });
-  }, [navigate, location, setGgSessionState, setGgCancelled, setGgExpired]);
+  }, [navigate, location, setGgSessionState, setGgCancelled, setGgExpired, setLaunchFailed]);
 
   return null;
 }
@@ -257,6 +280,7 @@ export default function App() {
   const [isCancelled, setIsCancelled] = useState(false);
   // false, or the phase that expired: 'lobby' | 'game'
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [launchFailed, setLaunchFailed] = useState(false);
 
   const handleGgSession = (sess) => {
     setGgSession(sess);
@@ -266,8 +290,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#EDEAE4] text-[#1A1A1A] flex flex-col items-center justify-start antialiased selection:bg-[#F5821F] selection:text-[#1A1A1A]">
       <BrowserRouter>
-        <AppCoordinator setGgSessionState={handleGgSession} setGgCancelled={setIsCancelled} setGgExpired={setIsSessionExpired} />
-        {!ggChecked ? (
+        <AppCoordinator setGgSessionState={handleGgSession} setGgCancelled={setIsCancelled} setGgExpired={setIsSessionExpired} setLaunchFailed={setLaunchFailed} />
+        {launchFailed ? (
+          <LaunchFailedScreen />
+        ) : !ggChecked ? (
           <LoadingScreen message="Connecting to GummyGum..." />
         ) : isCancelled ? (
           <GummyGumCancelledScreen isHost={Boolean(ggSession?.isHost)} completed={isCancelled === 'completed'} />
